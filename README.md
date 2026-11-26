@@ -80,8 +80,8 @@ Esto descarga todo lo que la app necesita (carpeta `node_modules`). Solo se hace
 
 1. En Supabase: **Authentication → Sign In / Providers → Email**. Verifica que esté activado.
 2. **Authentication → URL Configuration**:
-   - **Site URL**: `http://localhost:3000` (mientras pruebas). Cuando publiques, cámbiala por tu dominio.
-   - **Redirect URLs**: agrega `http://localhost:3000/**` y, más adelante, `https://TU-DOMINIO/**`.
+   - **Site URL**: `https://referidos-atom-pd9u.vercel.app` (la dirección pública en Vercel).
+   - **Redirect URLs**: agrega `https://referidos-atom-pd9u.vercel.app/**` y `http://localhost:3000/**` (para probar en tu computador).
 3. **Authentication → Emails → Templates**: cambia el link de dos plantillas para que el link mágico funcione aunque la persona lo abra en otro dispositivo (por ejemplo, pidió el link en el computador y lo abre en el celular).
    - En la plantilla **Magic link** reemplaza `{{ .ConfirmationURL }}` por:
      ```
@@ -114,7 +114,7 @@ Una *cuenta de servicio* es un "usuario robot" de Google que la app usa para lee
 
 | Variable | Dónde la consigues |
 |---|---|
-| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` en tu computador; tu dominio en producción |
+| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` en tu computador; `https://referidos-atom-pd9u.vercel.app` en Vercel |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → **Project Settings → Data API** (Project URL) |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase → **Project Settings → API Keys** → *Publishable key* (o la antigua *anon*) |
 | `SUPABASE_SECRET_KEY` | Mismo lugar → *Secret key* (o la antigua *service_role*). **Es secreta.** |
@@ -274,9 +274,9 @@ Muestran una lista con ✅ (bien), ⚠️ (aviso) o ❌ (por corregir) y **qué 
 
 1. Sube el proyecto a un repositorio **privado** en GitHub.
 2. Entra a https://vercel.com, inicia sesión con GitHub → **Add New → Project** → elige el repositorio → **Deploy**.
-3. En Vercel → tu proyecto → **Settings → Environment Variables**: agrega las mismas variables de `.env.local`, pero con `NEXT_PUBLIC_SITE_URL` = tu dominio (ej. `https://referidos.atom.com.co`). Para `GOOGLE_PRIVATE_KEY` pega el valor sin las comillas externas.
+3. En Vercel → tu proyecto → **Settings → Environment Variables**: agrega las mismas variables de `.env.local`, pero con `NEXT_PUBLIC_SITE_URL` = `https://referidos-atom-pd9u.vercel.app` (o tu dominio propio, si lo configuras). Para `GOOGLE_PRIVATE_KEY` pega el valor sin las comillas externas.
 4. **Settings → Domains** → agrega tu dominio y crea en tu proveedor de dominio el registro DNS que Vercel te indique.
-5. Vuelve a Supabase → **Authentication → URL Configuration** y pon tu dominio como *Site URL* y en *Redirect URLs*.
+5. Vuelve a Supabase → **Authentication → URL Configuration**: *Site URL* = `https://referidos-atom-pd9u.vercel.app`; *Redirect URLs* = `https://referidos-atom-pd9u.vercel.app/**` y `http://localhost:3000/**`. Si luego agregas un dominio propio, cámbialo en los dos lugares (Vercel y Supabase).
 6. En Vercel → **Deployments** → **Redeploy** para que tome las variables.
 
 ---
