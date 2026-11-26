@@ -1,0 +1,12 @@
+{
+  // VS Code te sugerirá instalar estas extensiones al abrir el proyecto.
+  "recommendations": [
+    "MS-CEINTL.vscode-language-pack-es",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "Supabase.vscode-supabase-extension",
+    "mikestead.dotenv",
+    "usernamehw.errorlens"
+  ]
+}
