@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  */
 export function MarcoAcceso({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="relative isolate flex flex-1 flex-col">
+    <div className="relative isolate flex flex-1 flex-col overflow-x-clip">
       <FondoDigital className="fixed" />
       <main
         className={cn(
@@ -50,9 +50,9 @@ export function ConMascota({
 }) {
   return (
     <div className="grid w-full max-w-6xl items-center justify-items-center gap-4 lg:grid-cols-[minmax(0,36rem)_minmax(0,1fr)] lg:gap-14">
-      <div className={cn("w-28 sm:w-36 lg:order-last lg:w-full lg:max-w-[26rem]", !enMovil && "hidden lg:block")}>
+      <div className={cn("w-36 py-3 sm:w-44 lg:order-last lg:w-full lg:max-w-[26rem] lg:py-0", !enMovil && "hidden lg:block")}>
         <Mascota
-          sizes="(min-width: 1024px) 416px, (min-width: 640px) 144px, 112px"
+          sizes="(min-width: 1024px) 416px, (min-width: 640px) 176px, 144px"
           movimiento={movimiento}
           parallax
           prioridad={prioridad}

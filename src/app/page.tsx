@@ -30,7 +30,7 @@ export default async function Inicio() {
   const maximo = bonos.length ? Math.max(...bonos.map((b) => b.bono)) : null;
 
   return (
-    <div className="relative isolate flex flex-1 flex-col">
+    <div className="relative isolate flex flex-1 flex-col overflow-x-clip">
       <FondoDigital className="fixed" />
       <EncabezadoPublico />
       <main className="flex-1">
@@ -59,13 +59,12 @@ function Hero({ maximo }: { maximo: number | null }) {
       aria-labelledby="titulo-inicio"
       className={cn(CONTENEDOR, "zona-saludo grid items-center gap-2 pt-4 pb-14 sm:pt-8 lg:min-h-[min(calc(100svh-4.5rem),52rem)] lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:pt-6 lg:pb-16")}
     >
-      {/* Mascota: en el celular arriba y "asomándose" (recortada); en PC grande a la derecha */}
-      <div className="relative mx-auto h-56 w-56 sm:h-72 sm:w-72 lg:order-last lg:h-auto lg:w-full lg:max-w-[32rem]">
+      {/* Mascota: en el celular arriba y completa (con margen para que al moverse no se corte); en PC grande a la derecha */}
+      <div className="relative mx-auto w-[min(58vw,14rem)] pt-2 pb-6 sm:w-64 sm:pt-4 lg:order-last lg:w-full lg:max-w-[32rem] lg:py-0">
         <Mascota
           prioridad
           parallax
-          asomadaEnMovil
-          sizes="(min-width: 1024px) 512px, (min-width: 640px) 288px, 224px"
+          sizes="(min-width: 1024px) 512px, (min-width: 640px) 256px, 58vw"
           className="w-full"
         />
       </div>

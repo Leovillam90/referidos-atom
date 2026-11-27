@@ -21,7 +21,6 @@ export function Mascota({
   parallax = false,
   halo = true,
   haloEnMovil = true,
-  asomadaEnMovil = false,
   alt = "Mascota de ATOM",
 }: {
   /** Ancho de la mascota (ej. "w-64 lg:w-[30rem]"). */
@@ -34,41 +33,32 @@ export function Mascota({
   halo?: boolean;
   /** false: el halo solo se ve en PC (si el contenedor recorta la mascota en el celular). */
   haloEnMovil?: boolean;
-  /** En el celular se ve "asomándose": la parte de abajo se desvanece. */
-  asomadaEnMovil?: boolean;
   alt?: string;
 }) {
   const imagen = (
     <div className="anim-entrada">
-      {/* En el celular solo se mueve la mascota principal (la de prioridad), para ahorrar batería */}
-      <div className={cn(movimiento === "flotar" && "anim-flotar", movimiento === "saltar" && "anim-salto", !prioridad && "max-md:animate-none")}>
-        <div className="anim-saludo">
-          <Image
-            src={MASCOTA.src}
-            width={MASCOTA.ancho}
-            height={MASCOTA.alto}
-            sizes={sizes}
-            alt={alt}
-            priority={prioridad}
-            fetchPriority={prioridad ? "high" : undefined}
-            className="h-auto w-full select-none"
-            draggable={false}
-          />
+      <div className={cn(movimiento === "flotar" && "anim-flotar", movimiento === "saltar" && "anim-salto")}>
+        <div className={cn(movimiento !== "quieta" && "anim-vida")}>
+          <div className="anim-saludo">
+            <Image
+              src={MASCOTA.src}
+              width={MASCOTA.ancho}
+              height={MASCOTA.alto}
+              sizes={sizes}
+              alt={alt}
+              priority={prioridad}
+              fetchPriority={prioridad ? "high" : undefined}
+              className="h-auto w-full select-none"
+              draggable={false}
+            />
+          </div>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div
-      className={cn(
-        "relative isolate",
-        // Recorte recto abajo (clip-path es casi gratis para la GPU; una máscara con
-        // desvanecido hacía lento el celular). Arriba y a los lados no recorta.
-        asomadaEnMovil && "max-lg:[clip-path:inset(-40%_-40%_18%_-40%)]",
-        className,
-      )}
-    >
+    <div className={cn("mascota relative isolate", className)}>
       {halo && (
         <div
           aria-hidden
@@ -76,7 +66,14 @@ export function Mascota({
         />
       )}
       {/* Sombra bajo los pies (degradado, sin filtros: más liviano que drop-shadow) */}
-      <div aria-hidden className={cn("absolute inset-x-[18%] bottom-[-2%] -z-10 h-[6%] rounded-[50%] bg-[radial-gradient(closest-side,rgb(0_0_0/0.55),transparent)]", asomadaEnMovil && "max-lg:hidden")} />
+      <div
+        aria-hidden
+        className={cn(
+          "absolute inset-x-[18%] bottom-[-2%] -z-10 h-[6%] rounded-[50%] bg-[radial-gradient(closest-side,rgb(0_0_0/0.55),transparent)]",
+          movimiento === "flotar" && "anim-sombra",
+          movimiento === "saltar" && "anim-sombra-salto",
+        )}
+      />
       {parallax ? <ParallaxMouse>{imagen}</ParallaxMouse> : imagen}
     </div>
   );

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Inclina un poco su contenido siguiendo el mouse (máx. ~6°).
+ * Inclina un poco su contenido siguiendo el mouse (máx. ~9°).
  * Solo en PC (≥1024 px con mouse) y si la persona no pidió menos movimiento.
  */
 export function ParallaxMouse({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -20,8 +20,8 @@ export function ParallaxMouse({ children, className }: { children: React.ReactNo
       cuadro = requestAnimationFrame(() => {
         const x = e.clientX / window.innerWidth - 0.5;
         const y = e.clientY / window.innerHeight - 0.5;
-        el!.style.setProperty("--px", `${(x * 12).toFixed(2)}deg`);
-        el!.style.setProperty("--py", `${(-y * 8).toFixed(2)}deg`);
+        el!.style.setProperty("--px", `${(x * 18).toFixed(2)}deg`);
+        el!.style.setProperty("--py", `${(-y * 12).toFixed(2)}deg`);
       });
     }
     function activar() {

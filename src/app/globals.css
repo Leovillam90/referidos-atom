@@ -198,9 +198,26 @@
   80% { transform: translate3d(0, 4px, 0); }
   100% { transform: translate3d(0, 0, 0); opacity: 1; }
 }
+/* Flotación con balanceo: sube y baja, se mece a los lados e inclina un poco */
 @keyframes mascota-flotar {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(0, -12px, 0); }
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  25% { transform: translate3d(5px, -10px, 0) rotate(2deg); }
+  50% { transform: translate3d(0, -18px, 0) rotate(0deg); }
+  75% { transform: translate3d(-5px, -9px, 0) rotate(-2deg); }
+}
+/* "Vida": cada ~7 s saluda sola (inclinación corta) */
+@keyframes mascota-vida {
+  0%, 58%, 100% { transform: rotate(0deg); }
+  62% { transform: rotate(-8deg); }
+  67% { transform: rotate(6deg); }
+  72% { transform: rotate(-5deg); }
+  77% { transform: rotate(3deg); }
+  82% { transform: rotate(0deg); }
+}
+/* La sombra de los pies se achica cuando la mascota sube */
+@keyframes sombra-flotar {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(0.72); opacity: 0.5; }
 }
 @keyframes halo-respirar {
   0%, 100% { opacity: 0.45; transform: scale(0.94); }
@@ -228,13 +245,18 @@
 .anim-fondo-b { animation: fondo-mover-b 28s ease-in-out infinite; }
 .anim-particula { animation: particula 7s ease-in-out infinite; }
 .anim-entrada { animation: mascota-entrada 1.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
-.anim-flotar { animation: mascota-flotar 4.5s ease-in-out 1.1s infinite; }
+.anim-flotar { animation: mascota-flotar 5s ease-in-out 1.1s infinite; }
+.anim-vida { transform-origin: 50% 90%; animation: mascota-vida 7s ease-in-out 2.5s infinite; }
+.anim-sombra { animation: sombra-flotar 5s ease-in-out 1.1s infinite; }
+.anim-sombra-salto { animation: sombra-flotar 2.6s ease-in-out 1.2s infinite; }
 .anim-halo { animation: halo-respirar 6s ease-in-out infinite; }
 .anim-salto { animation: mascota-salto 2.6s ease-in-out 1.2s infinite; }
 .anim-saludo { transform-origin: 50% 85%; }
 
 /* Saludo: al pasar el mouse (o enfocar con teclado) el botón principal */
-.zona-saludo:has(.dispara-saludo:hover, .dispara-saludo:focus-visible) .anim-saludo {
+.zona-saludo:has(.dispara-saludo:hover, .dispara-saludo:focus-visible) .anim-saludo,
+.mascota:hover .anim-saludo,
+.mascota:active .anim-saludo {
   animation: mascota-saludo 0.9s ease-in-out;
 }
 
@@ -261,12 +283,10 @@
 
 /* En el celular: animaciones más ligeras (sin fondo en movimiento) */
 @media (max-width: 767px) {
-  /* Celular: solo la entrada con rebote y el salto de /gracias (2 veces).
-     Las animaciones infinitas gastan batería y frenan los celulares lentos. */
-  .anim-fondo-a, .anim-fondo-b, .anim-particula, .anim-halo, .anim-flotar { animation: none; }
-  .anim-salto { animation-iteration-count: 2; }
-  .anim-particula { opacity: 0.35; }
-  .anim-halo { opacity: 0.6; }
+  /* Celular: la mascota se mueve igual que en PC (solo transform/opacity,
+     baratos para la GPU). Solo se apaga el fondo grande en movimiento. */
+  .anim-fondo-a, .anim-fondo-b { animation: none; }
+  .anim-particula { animation-duration: 9s; }
 }
 
 /* Tablas → tarjetas en el celular. Cada celda muestra su título con data-label. */
@@ -311,8 +331,9 @@
 /* Sin animaciones para quien las desactive en su sistema */
 @media (prefers-reduced-motion: reduce) {
   .anim-fondo-a, .anim-fondo-b, .anim-particula, .anim-entrada, .anim-flotar,
-  .anim-halo, .anim-salto, .aparecer,
-  .zona-saludo:has(.dispara-saludo:hover, .dispara-saludo:focus-visible) .anim-saludo {
+  .anim-halo, .anim-salto, .aparecer, .anim-vida, .anim-sombra, .anim-sombra-salto,
+  .zona-saludo:has(.dispara-saludo:hover, .dispara-saludo:focus-visible) .anim-saludo,
+  .mascota:hover .anim-saludo, .mascota:active .anim-saludo {
     animation: none !important;
   }
   .parallax-mouse { transform: none !important; transition: none; }
