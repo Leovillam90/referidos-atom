@@ -20,6 +20,7 @@ import { urlSitio } from "@/lib/config-programa";
 import { cerrarSesion } from "./acciones";
 import { CopiarLink } from "./copiar-link";
 import { MarcoApp } from "@/components/marco-app";
+import { Mascota } from "@/components/mascota";
 
 export const metadata: Metadata = { title: "Mi panel · Referidos ATOM" };
 
@@ -85,17 +86,49 @@ async function ContenidoPanel() {
 
   return (
     <>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="grid gap-1">
-          <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Hola, {referente.nombre.split(" ")[0]}</h1>
-          <p className="text-sm text-muted-foreground">Aquí ves a las personas que se registraron con tu link y tus bonos.</p>
+      {/* Bienvenida: saludo y link a la izquierda, mascota a la derecha "señalándolos" */}
+      <section
+        aria-labelledby="saludo-panel"
+        className="zona-saludo borde-degradado grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-x-4 gap-y-5 rounded-3xl p-5 sm:grid-cols-[minmax(0,1fr)_8rem] sm:p-7 md:grid-cols-[minmax(0,1fr)_11rem] md:gap-x-8 lg:grid-cols-[minmax(0,1fr)_13rem] lg:px-10"
+      >
+        <div className="grid gap-1.5 self-center">
+          <p className="text-xs font-bold tracking-[0.2em] text-sea-green uppercase">Mi panel de referente</p>
+          <h1 id="saludo-panel" className="text-[clamp(1.6rem,1.2rem+1.8vw,2.5rem)] leading-tight font-black tracking-tight">
+            Hola, {referente.nombre.split(" ")[0]}
+          </h1>
+          <p className="text-sm text-muted-foreground sm:text-base">
+            Aquí ves a las personas que se registraron con tu link y tus bonos.
+          </p>
+          {esSuperAdmin && (
+            <div className="pt-2">
+              <Link href="/admin" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                Ir a administración
+              </Link>
+            </div>
+          )}
         </div>
-        {esSuperAdmin && (
-          <Link href="/admin" className={buttonVariants({ variant: "outline" })}>
-            Ir a administración
-          </Link>
-        )}
-      </div>
+
+        {/* En el celular pequeña junto al saludo; en PC grande ocupando las dos filas */}
+        <div className="w-full py-2 md:row-span-2">
+          <Mascota
+            prioridad
+            parallax
+            sizes="(min-width: 1024px) 208px, (min-width: 768px) 176px, (min-width: 640px) 128px, 96px"
+          />
+        </div>
+
+        <div className="dispara-saludo col-span-2 flex min-w-0 flex-col gap-2 md:col-span-1">
+          <h2 className="text-base font-bold">Tu link de referido</h2>
+          <p className="text-sm text-muted-foreground">
+            Compártelo con proveedores y marcas. Cuando se registren con él, aparecerán abajo.
+          </p>
+          {referente.activo ? (
+            <CopiarLink url={link} />
+          ) : (
+            <p className="text-sm text-destructive">Tu link está desactivado. Escríbenos para revisarlo.</p>
+          )}
+        </div>
+      </section>
 
       <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
         <Resumen titulo="Estimado" valor={formatoPesos(total("estimado"))} detalle="Referidos que aún no se activan" />
@@ -103,21 +136,6 @@ async function ContenidoPanel() {
         <Resumen titulo="Pagado" valor={formatoPesos(total("pagado"))} detalle="Bonos que ya recibiste" />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Tu link de referido</CardTitle>
-          <CardDescription>
-            Compártelo con proveedores y marcas. Cuando se registren con él, aparecerán abajo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {referente.activo ? (
-            <CopiarLink url={link} />
-          ) : (
-            <p className="text-sm text-destructive">Tu link está desactivado. Escríbenos para revisarlo.</p>
-          )}
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>

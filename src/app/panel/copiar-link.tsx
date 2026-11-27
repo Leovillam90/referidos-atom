@@ -39,17 +39,17 @@ export function CopiarLink({ url }: { url: string }) {
   }
 
   return (
-    <div className="grid gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded-full border bg-dark-gunmetal/60 px-4 py-2.5 text-sm text-sea-green select-all">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <code className="min-w-0 basis-full truncate sm:basis-auto sm:flex-1 rounded-full border bg-dark-gunmetal/60 px-4 py-2.5 text-sm text-sea-green select-all">
           {url}
         </code>
-        <Button type="button" variant="outline" size="lg" onClick={copiar}>
+        <Button type="button" variant="outline" size="lg" onClick={copiar} className="flex-1 sm:flex-none">
           {copiado ? <Check aria-hidden /> : <Copy aria-hidden />}
           {copiado ? "¡Copiado!" : "Copiar"}
         </Button>
         {puedeCompartir && (
-          <Button type="button" size="lg" onClick={compartir}>
+          <Button type="button" size="lg" onClick={compartir} className="flex-1 sm:flex-none">
             <Share2 aria-hidden />
             Compartir
           </Button>
