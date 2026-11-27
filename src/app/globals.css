@@ -239,10 +239,14 @@
 }
 
 /* Parallax: la mascota sigue un poco al mouse (variables desde JS, solo PC) */
-.parallax-mouse {
-  transform: perspective(900px) rotateY(var(--px, 0deg)) rotateX(var(--py, 0deg));
-  transition: transform 0.4s ease-out;
-  will-change: transform;
+/* Solo en PC con mouse: en el celular la transformación 3D obligaría a
+   redibujar la mascota con la GPU sin ningún beneficio. */
+@media (min-width: 1024px) and (pointer: fine) {
+  .parallax-mouse {
+    transform: perspective(900px) rotateY(var(--px, 0deg)) rotateX(var(--py, 0deg));
+    transition: transform 0.4s ease-out;
+    will-change: transform;
+  }
 }
 
 /* Secciones que aparecen al hacer scroll (sin JS; si el navegador no lo
