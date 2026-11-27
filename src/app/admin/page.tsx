@@ -59,7 +59,7 @@ export default function PaginaAdmin({ searchParams }: PageProps<"/admin">) {
 function Cargando() {
   return (
     <div className="grid gap-6" aria-busy="true" aria-label="Cargando">
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="h-24 animate-pulse rounded-3xl bg-muted" />
         ))}
@@ -94,7 +94,7 @@ async function Contenido({ vista, filtro }: { vista: Vista; filtro: FiltroReferi
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Resumen titulo="Estimado" valor={formatoPesos(totales.estimado)} />
         <Resumen titulo="Por pagar" valor={formatoPesos(totales.por_pagar)} />
         <Resumen titulo="Pagado" valor={formatoPesos(totales.pagado)} />
@@ -214,23 +214,23 @@ function TablaReferentes({ referentes }: { referentes: ResumenReferente[] }) {
       <TableBody>
         {referentes.map((f) => (
           <TableRow key={f.id}>
-            <TableCell>
+            <TableCell data-label="Referente">
               <Link href={`/admin/referentes/${f.id}`} className="grid hover:underline">
                 <span className="font-medium">{f.nombre}</span>
                 <span className="text-xs text-muted-foreground">{f.correo}</span>
               </Link>
             </TableCell>
-            <TableCell>
+            <TableCell data-label="Código">
               <span className={cn("font-mono text-xs", !f.activo && "text-muted-foreground line-through")}>
                 {f.codigo}
               </span>
               {!f.activo && <span className="ml-2 text-xs text-destructive">inactivo</span>}
             </TableCell>
-            <TableCell className="text-right tabular-nums">{f.referidos}</TableCell>
-            <TableCell className="text-right tabular-nums">{f.activos}</TableCell>
-            <TableCell className="text-right tabular-nums">{formatoPesos(f.totales.estimado)}</TableCell>
-            <TableCell className="text-right font-medium tabular-nums">{formatoPesos(f.totales.por_pagar)}</TableCell>
-            <TableCell className="text-right tabular-nums">{formatoPesos(f.totales.pagado)}</TableCell>
+            <TableCell data-label="Referidos" className="text-right tabular-nums">{f.referidos}</TableCell>
+            <TableCell data-label="Activos" className="text-right tabular-nums">{f.activos}</TableCell>
+            <TableCell data-label="Estimado" className="text-right tabular-nums">{formatoPesos(f.totales.estimado)}</TableCell>
+            <TableCell data-label="Por pagar" className="text-right font-medium tabular-nums">{formatoPesos(f.totales.por_pagar)}</TableCell>
+            <TableCell data-label="Pagado" className="text-right tabular-nums">{formatoPesos(f.totales.pagado)}</TableCell>
           </TableRow>
         ))}
       </TableBody>

@@ -81,7 +81,7 @@ async function Contenido({ id }: { id: string }) {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
         <Resumen titulo="Estimado" valor={formatoPesos(totales.estimado)} />
         <Resumen titulo="Por pagar" valor={formatoPesos(totales.por_pagar)} />
         <Resumen titulo="Pagado" valor={formatoPesos(totales.pagado)} />
@@ -134,16 +134,16 @@ async function Contenido({ id }: { id: string }) {
               <TableBody>
                 {pagos.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell className="whitespace-nowrap">{formatoFecha(`${p.fecha_pago}T12:00:00`)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatoPesos(p.valor_pagado)}</TableCell>
-                    <TableCell>
+                    <TableCell data-label="Fecha de pago" className="whitespace-nowrap">{formatoFecha(`${p.fecha_pago}T12:00:00`)}</TableCell>
+                    <TableCell data-label="Valor" className="text-right tabular-nums">{formatoPesos(p.valor_pagado)}</TableCell>
+                    <TableCell data-label="Referidos">
                       {referidos
                         .filter((r) => r.pago?.id === p.id)
                         .map((r) => r.nombre ?? r.correo)
                         .join(", ") || "—"}
                     </TableCell>
-                    <TableCell className="max-w-xs whitespace-normal text-muted-foreground">{p.nota ?? "—"}</TableCell>
-                    <TableCell>
+                    <TableCell data-label="Nota" className="max-w-xs whitespace-normal text-muted-foreground">{p.nota ?? "—"}</TableCell>
+                    <TableCell data-label="Soporte">
                       <Link href={`/soporte/${p.id}`} target="_blank" prefetch={false} className="text-sm font-medium text-primary hover:underline">
                         Ver soporte
                       </Link>

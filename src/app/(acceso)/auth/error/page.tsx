@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { ConMascota } from "@/components/marco-acceso";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ErrorDeLink() {
   return (
+    <ConMascota>
     <Card className="w-full max-w-md">
       <CardHeader>
         <CardTitle className="text-2xl font-black">El link no funcionó</CardTitle>
@@ -18,5 +20,6 @@ export default function ErrorDeLink() {
         </Link>
       </CardFooter>
     </Card>
+    </ConMascota>
   );
 }

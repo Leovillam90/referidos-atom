@@ -1,3 +1,4 @@
+import { FondoDigital } from "@/components/fondo-digital";
 import { LogoEncabezado, PieMarca } from "@/components/marca";
 import { cn } from "@/lib/utils";
 
@@ -9,7 +10,7 @@ export function MarcoApp({
   inicio,
   etiqueta,
   acciones,
-  ancho = "max-w-6xl",
+  ancho = "max-w-[88rem]",
   children,
 }: {
   /** A dónde lleva el logo. */
@@ -18,19 +19,20 @@ export function MarcoApp({
   etiqueta: string;
   /** Botones del encabezado. */
   acciones: React.ReactNode;
-  ancho?: "max-w-6xl" | "max-w-7xl";
+  ancho?: "max-w-6xl" | "max-w-7xl" | "max-w-[88rem]";
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="sticky top-0 z-20 bg-dark-gunmetal/90 backdrop-blur supports-backdrop-filter:bg-dark-gunmetal/75">
-        <div className={cn("mx-auto flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3", ancho)}>
+    <div className="relative isolate flex flex-1 flex-col">
+      <FondoDigital className="fixed" particulas={false} />
+      <header className="vidrio sticky top-0 z-20">
+        <div className={cn("mx-auto flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-2 px-[clamp(1rem,3vw,2.5rem)] py-3", ancho)}>
           <LogoEncabezado href={inicio} etiqueta={etiqueta} />
           <div className="flex flex-wrap items-center gap-1">{acciones}</div>
         </div>
         <div aria-hidden className="linea-degradado h-0.5 rounded-none opacity-80" />
       </header>
-      <main className={cn("mx-auto grid w-full gap-6 px-4 py-6 sm:py-8", ancho)}>{children}</main>
+      <main className={cn("mx-auto grid w-full gap-6 px-[clamp(1rem,3vw,2.5rem)] py-6 sm:py-8", ancho)}>{children}</main>
       <PieMarca />
     </div>
   );

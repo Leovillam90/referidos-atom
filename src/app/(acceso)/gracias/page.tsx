@@ -11,6 +11,7 @@ import {
   WHATSAPP_CAPACITACION,
 } from "@/lib/config-programa";
 import { buscarPlan } from "@/lib/planes";
+import { ConMascota } from "@/components/marco-acceso";
 
 export const metadata: Metadata = {
   title: "¡Gracias! · Referidos ATOM",
@@ -19,7 +20,8 @@ export const metadata: Metadata = {
 
 export default function PaginaGracias({ searchParams }: PageProps<"/gracias">) {
   return (
-    <Card className="w-full max-w-md">
+    <ConMascota movimiento="saltar" prioridad>
+    <Card className="w-full max-w-xl">
       <CardHeader>
         <CircleCheck className="size-9 text-sea-green" aria-hidden />
         <CardTitle className="text-2xl font-black">¡Gracias por registrarte!</CardTitle>
@@ -37,6 +39,7 @@ export default function PaginaGracias({ searchParams }: PageProps<"/gracias">) {
         </Suspense>
       </CardContent>
     </Card>
+    </ConMascota>
   );
 }
 

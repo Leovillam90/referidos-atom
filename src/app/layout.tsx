@@ -6,12 +6,12 @@ import "./globals.css";
  * Satoshi (Fontshare / Indian Type Foundry), autoalojada y sin modificar.
  * Licencia: src/fonts/satoshi/LICENCIA-FFL.txt (permite usarla en sitios
  * propios, pero NO distribuir los archivos: el repositorio debe ser privado).
- * Black = títulos · Regular = textos · Medium/Bold = etiquetas y botones.
+ * Black = títulos · Regular = textos · Bold = etiquetas y botones.
+ * (Sin Medium: font-medium usa Regular; una fuente menos = carga más rápida.)
  */
 const satoshi = localFont({
   src: [
     { path: "../fonts/satoshi/Satoshi-Regular.woff2", weight: "400", style: "normal" },
-    { path: "../fonts/satoshi/Satoshi-Medium.woff2", weight: "500", style: "normal" },
     { path: "../fonts/satoshi/Satoshi-Bold.woff2", weight: "700", style: "normal" },
     { path: "../fonts/satoshi/Satoshi-Black.woff2", weight: "900", style: "normal" },
   ],

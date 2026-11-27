@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ConMascota } from "@/components/marco-acceso";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormularioRegistro } from "./formulario-registro";
 
@@ -7,6 +8,7 @@ export const metadata: Metadata = { title: "Registro de referentes · Referidos 
 
 export default function PaginaRegistro() {
   return (
+    <ConMascota enMovil={false}>
     <Card className="w-full max-w-md">
       <CardHeader>
         <CardTitle className="text-2xl font-black">Regístrate como referente</CardTitle>
@@ -25,5 +27,6 @@ export default function PaginaRegistro() {
         </Link>
       </CardFooter>
     </Card>
+    </ConMascota>
   );
 }

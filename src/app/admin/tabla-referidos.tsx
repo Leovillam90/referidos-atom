@@ -30,7 +30,7 @@ export function TablaReferidos({
       <TableBody>
         {referidos.map((r) => (
           <TableRow key={r.id}>
-            <TableCell>
+            <TableCell data-label="Referido">
               <Link href={`/admin/referidos/${r.id}`} className="grid hover:underline">
                 <span className="font-medium">{r.nombre ?? "—"}</span>
                 <span className="text-xs text-muted-foreground">
@@ -39,26 +39,26 @@ export function TablaReferidos({
               </Link>
             </TableCell>
             {mostrarReferente && (
-              <TableCell>
+              <TableCell data-label="Referente">
                 <Link href={`/admin/referentes/${r.referente_id}`} className="grid hover:underline">
                   <span>{r.referente?.nombre ?? "—"}</span>
                   <span className="font-mono text-xs text-muted-foreground">{r.referente?.codigo}</span>
                 </Link>
               </TableCell>
             )}
-            <TableCell>{nombrePlan(planes, r.plan_solicitado) ?? "—"}</TableCell>
-            <TableCell>
+            <TableCell data-label="Plan solicitado">{nombrePlan(planes, r.plan_solicitado) ?? "—"}</TableCell>
+            <TableCell data-label="Plan afiliado">
               {nombrePlan(planes, r.plan_afiliado_id) ??
                 (r.plan_hoja ? <span className="text-destructive">{r.plan_hoja} (sin coincidencia)</span> : "—")}
             </TableCell>
-            <TableCell>
+            <TableCell data-label="Activo">
               <Activo valor={r.afiliado_atom} />
               {r.editado_manual && <span className="ml-1 text-xs text-muted-foreground">(manual)</span>}
             </TableCell>
-            <TableCell className="text-right tabular-nums">
+            <TableCell data-label="Bono" className="text-right tabular-nums">
               {r.estado_bono === "no_aplica" ? "—" : formatoPesos(r.bono)}
             </TableCell>
-            <TableCell>
+            <TableCell data-label="Estado">
               <EstadoBonoEtiqueta estado={r.estado_bono} pago={r.pago} />
             </TableCell>
           </TableRow>

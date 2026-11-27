@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
  * se usan las versiones con texto blanco.
  */
 const LOGOS = {
-  horizontal: { src: "/brand/logo-horizontal-texto-blanco.png", ancho: 900, alto: 201 },
-  vertical: { src: "/brand/logo-vertical-texto-blanco.png", ancho: 760, alto: 600 },
+  horizontal: { src: "/brand/logo-horizontal-texto-blanco.png", ancho: 900, alto: 201, sizes: "160px" },
+  vertical: { src: "/brand/logo-vertical-texto-blanco.png", ancho: 760, alto: 600, sizes: "128px" },
 } as const;
 
 export function Logo({
@@ -29,6 +29,7 @@ export function Logo({
       src={logo.src}
       width={logo.ancho}
       height={logo.alto}
+      sizes={logo.sizes}
       alt="ATOM Solutions Data"
       priority={prioridad}
       className={cn("w-auto select-none", className)}

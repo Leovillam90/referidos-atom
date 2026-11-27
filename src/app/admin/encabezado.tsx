@@ -9,7 +9,6 @@ export function EncabezadoAdmin({ children }: { children: React.ReactNode }) {
     <MarcoApp
       inicio="/admin"
       etiqueta="Super admin"
-      ancho="max-w-7xl"
       acciones={
         <>
           <Link href="/admin/estado" prefetch={false} className={buttonVariants({ variant: "ghost", size: "sm" })}>

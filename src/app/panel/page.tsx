@@ -97,7 +97,7 @@ async function ContenidoPanel() {
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
         <Resumen titulo="Estimado" valor={formatoPesos(total("estimado"))} detalle="Referidos que aún no se activan" />
         <Resumen titulo="Por pagar" valor={formatoPesos(total("por_pagar"))} detalle="Referidos activos en ATOM" />
         <Resumen titulo="Pagado" valor={formatoPesos(total("pagado"))} detalle="Bonos que ya recibiste" />
@@ -161,21 +161,21 @@ function TablaReferidos({ referidos, planes }: { referidos: ReferidoDelPanel[]; 
       <TableBody>
         {referidos.map((r) => (
           <TableRow key={r.id}>
-            <TableCell>
+            <TableCell data-label="Referido">
               <div className="grid">
                 <span className="font-medium">{r.nombre ?? r.correo}</span>
                 <span className="text-xs text-muted-foreground">{formatoFecha(r.created_at)}</span>
               </div>
             </TableCell>
-            <TableCell>{nombrePlan(planes, r.plan_solicitado) ?? "—"}</TableCell>
-            <TableCell>{nombrePlan(planes, r.plan_afiliado_id) ?? (r.afiliado_atom ? r.plan_hoja : null) ?? "—"}</TableCell>
-            <TableCell>
+            <TableCell data-label="Plan solicitado">{nombrePlan(planes, r.plan_solicitado) ?? "—"}</TableCell>
+            <TableCell data-label="Plan afiliado">{nombrePlan(planes, r.plan_afiliado_id) ?? (r.afiliado_atom ? r.plan_hoja : null) ?? "—"}</TableCell>
+            <TableCell data-label="Activo en ATOM">
               <Activo valor={r.afiliado_atom} />
             </TableCell>
-            <TableCell className="text-right tabular-nums">
+            <TableCell data-label="Bono" className="text-right tabular-nums">
               {r.estado_bono === "no_aplica" ? "—" : formatoPesos(r.bono)}
             </TableCell>
-            <TableCell>
+            <TableCell data-label="Estado">
               <EstadoBonoEtiqueta estado={r.estado_bono} pago={r.pago} />
             </TableCell>
           </TableRow>

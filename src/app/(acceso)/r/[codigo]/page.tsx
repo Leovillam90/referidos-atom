@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { buscarReferentePorCodigo, primerNombre } from "@/lib/referentes-publico";
 import { planesParaFormulario } from "@/lib/planes";
 import { FormularioReferido } from "./formulario-referido";
+import { ConMascota } from "@/components/marco-acceso";
 
 export const metadata: Metadata = {
   title: "Únete a ATOM · Referidos ATOM",
@@ -13,7 +14,8 @@ export const metadata: Metadata = {
 
 export default function PaginaReferido({ params }: PageProps<"/r/[codigo]">) {
   return (
-    <Card className="w-full max-w-md">
+    <ConMascota prioridad>
+    <Card className="w-full max-w-xl">
       {/* El código llega con la visita, por eso va dentro de Suspense */}
       <Suspense fallback={<Cargando />}>
         {params.then(({ codigo }) => (
@@ -21,6 +23,7 @@ export default function PaginaReferido({ params }: PageProps<"/r/[codigo]">) {
         ))}
       </Suspense>
     </Card>
+    </ConMascota>
   );
 }
 

@@ -293,6 +293,11 @@ Muestran una lista con ✅ (bien), ⚠️ (aviso) o ❌ (por corregir) y **qué 
   **no permite publicar los archivos de la fuente**: este repositorio debe seguir siendo **privado**.
 - **Logos:** `public/brand/` (copiados del manual de marca, sin deformar). Favicon e íconos del
   celular: `src/app/favicon.ico`, `icon.png`, `apple-icon.png` y `public/brand/icono-*.png`.
+- **Mascota:** `public/brand/mascota.webp` (965×1200, ~100 KB) y `mascota.png` de respaldo. Componente
+  `src/components/mascota.tsx` (entrada con rebote, flotación, halo, parallax en PC y saludo al pasar por
+  "Quiero ser referente"). Todas las animaciones son CSS y se apagan con "reducir movimiento" del sistema.
+- **Bonos del inicio:** se leen de la tabla `planes` y se guardan en caché 1 hora (`bonosPublicos` en
+  `src/lib/planes.ts`).
 - **Correos:** los de la app están en `src/lib/correo.ts`; las plantillas para Supabase Auth
   (Magic link y Confirm signup) están en `emails/` con instrucciones para pegarlas.
 
