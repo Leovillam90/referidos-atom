@@ -49,11 +49,20 @@ export async function registrarReferente(
     return { ok: true, mensaje: "Revisa tu correo para continuar." };
   }
 
-  const resultado = esquemaRegistroReferente.safeParse(valores);
+  const resultado = esquemaRegistroReferente.safeParse({
+    ...valores,
+    autoriza_datos: formData.get("autoriza_datos") ?? undefined,
+  });
   if (!resultado.success) {
     return { ok: false, errores: erroresPorCampo(resultado.error), valores };
   }
   const datos = resultado.data;
+
+  const version = process.env.POLITICA_DATOS_VERSION?.trim();
+  if (!version) {
+    console.error("[registro] Falta la variable POLITICA_DATOS_VERSION");
+    return { ok: false, mensaje: "No pudimos completar tu registro. Intenta de nuevo más tarde.", valores };
+  }
 
   const supabase = await crearClienteServidor();
   const { error } = await supabase.auth.signInWithOtp({
@@ -68,6 +77,9 @@ export async function registrarReferente(
         nombre: datos.nombre,
         telefono: datos.telefono,
         cuenta_dropi: datos.cuenta_dropi,
+        // Prueba de la autorización (Ley 1581 de 2012)
+        autoriza_datos: true,
+        version_politica: version,
       },
     },
   });

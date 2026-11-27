@@ -13,6 +13,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { auth, sheets } from "@googleapis/sheets";
 import nodemailer from "nodemailer";
 import configVercel from "../../vercel.json";
+import { pesosCOP } from "./formato";
 
 export type Estado = "ok" | "error" | "aviso";
 export type Resultado = { estado: Estado; titulo: string; detalle?: string; solucion?: string };
@@ -184,7 +185,6 @@ function normalizarTitulo(t: unknown) {
     .toLowerCase();
 }
 
-const pesos = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 
 // ---------------------------------------------------------------------
 // 1. Variables de entorno
@@ -396,7 +396,7 @@ async function revisarBaseDeDatos(admin: SupabaseClient | null): Promise<{ grupo
   if (planes) {
     const faltan = PLANES_ESPERADOS.filter((id) => !planes!.some((p) => p.id === id));
     const sinBono = planes.filter((p) => !(Number(p.bono) > 0));
-    const lista = planes.map((p) => `${p.nombre} ${pesos.format(Number(p.bono) || 0)}${p.activo ? "" : " (inactivo)"}`).join(" · ");
+    const lista = planes.map((p) => `${p.nombre} ${pesosCOP(Number(p.bono) || 0)}${p.activo ? "" : " (inactivo)"}`).join(" · ");
     if (faltan.length) datos.push(error(`Faltan planes: ${faltan.join(", ")}`, SCHEMA, lista || "La tabla está vacía."));
     else if (sinBono.length)
       datos.push(

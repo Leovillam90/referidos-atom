@@ -57,7 +57,7 @@ function Hero({ maximo }: { maximo: number | null }) {
   return (
     <section
       aria-labelledby="titulo-inicio"
-      className={cn(CONTENEDOR, "zona-saludo grid items-center gap-2 pt-4 pb-14 sm:pt-8 lg:min-h-[min(calc(100svh-4.5rem),52rem)] lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:pt-6 lg:pb-16")}
+      className={cn(CONTENEDOR, "zona-saludo grid items-center gap-2 pt-4 pb-14 sm:pt-8 lg:min-h-[min(calc(100svh-4.5rem),44rem)] lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:pt-6 lg:pb-4")}
     >
       {/* Mascota: en el celular arriba y completa (con margen para que al moverse no se corte); en PC grande a la derecha */}
       <div className="relative mx-auto w-[min(58vw,14rem)] pt-2 pb-6 sm:w-64 sm:pt-4 lg:order-last lg:w-full lg:max-w-[32rem] lg:py-0">
@@ -129,7 +129,7 @@ function ComoFunciona() {
     { icono: BadgeCheck, titulo: "Gana cuando se activa", texto: "Cuando tu referido se activa en ATOM, tu bono pasa a “por pagar” y te avisamos al pagarlo." },
   ];
   return (
-    <section aria-labelledby="como-funciona" className={cn(CONTENEDOR, "aparecer py-14 sm:py-20")}>
+    <section aria-labelledby="como-funciona" className={cn(CONTENEDOR, "aparecer py-14 sm:py-20 lg:pt-10")}>
       <TituloSeccion id="como-funciona" etiqueta="Cómo funciona" titulo="Tres pasos y listo" />
       <ol className="relative mt-10 grid gap-4 md:grid-cols-3 md:gap-6">
         {/* Línea que une los pasos (PC y tablet) */}

@@ -34,7 +34,11 @@ export default function PaginaPolitica() {
         </section>
         <section className="grid gap-1">
           <h2>2. Datos que recogemos</h2>
-          <p>Nombre, correo electrónico, teléfono, cuenta de Dropi, si eres proveedor o marca y el plan que te interesa.</p>
+          <p>
+            Si eres referido: nombre, correo electrónico, teléfono, cuenta de Dropi, si eres proveedor o marca y
+            el plan que te interesa.
+          </p>
+          <p>Si eres referente: nombre, correo electrónico, teléfono y cuenta de Dropi.</p>
         </section>
         <section className="grid gap-1">
           <h2>3. Para qué los usamos</h2>
@@ -47,6 +51,12 @@ export default function PaginaPolitica() {
             La persona que te refirió podrá ver tu nombre, tus datos de contacto, el plan que te interesa,
             el plan que tomaste y si estás activo en ATOM. También le avisaremos por correo que te registraste.
           </p>
+          <p>Si eres referente, usamos tus datos para:</p>
+          <ul className="list-disc pl-5">
+            <li>Crear tu cuenta, darte acceso a tu panel y tu link personal.</li>
+            <li>Asociar a tus referidos, calcular tus bonos, pagarlos y enviarte los soportes de pago.</li>
+            <li>Avisarte por correo sobre tus referidos y tus pagos.</li>
+          </ul>
         </section>
         <section className="grid gap-1">
           <h2>4. Tus derechos</h2>
@@ -63,8 +73,9 @@ export default function PaginaPolitica() {
         <section className="grid gap-1">
           <h2>6. Registro de tu autorización</h2>
           <p>
-            Al enviar el formulario guardamos la fecha, la versión de esta política, tu dirección IP y
-            el navegador que usaste, como prueba de que nos diste tu autorización.
+            Al enviar el formulario guardamos la fecha y la versión de esta política como prueba de que
+            nos diste tu autorización. En el formulario de referidos guardamos además tu dirección IP y el
+            navegador que usaste.
           </p>
         </section>
       </CardContent>

@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Campo } from "@/components/campo";
+import { CampoTrampa } from "@/components/campo-trampa";
+import { CasillaAutorizacion } from "@/components/casilla-autorizacion";
 import { AvisoEnviado } from "@/components/aviso-enviado";
 import { registrarReferente, type EstadoFormulario } from "../acciones";
 
@@ -40,13 +42,12 @@ export function FormularioRegistro() {
         required
       />
 
-      {/* Campo trampa para robots: oculto para las personas */}
-      <div aria-hidden className="absolute -left-[9999px] h-0 overflow-hidden">
-        <label>
-          No llenar
-          <input type="text" name="sitio_web" tabIndex={-1} autoComplete="off" />
-        </label>
-      </div>
+      <CasillaAutorizacion
+        finalidad="gestionar mi participación como referente y el pago de mis bonos"
+        error={e.autoriza_datos}
+      />
+
+      <CampoTrampa />
 
       {estado.mensaje && !estado.ok && (
         <p role="alert" className="text-sm text-destructive">

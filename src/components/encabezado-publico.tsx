@@ -12,8 +12,10 @@ export function EncabezadoPublico() {
           <Link href="/ingresar" className={buttonVariants({ variant: "ghost", size: "sm", className: "h-10 px-4" })}>
             Entrar
           </Link>
-          <Link href="/registro" className={buttonVariants({ size: "sm", className: "hidden h-10 px-4 sm:inline-flex" })}>
-            Quiero ser referente
+          {/* En el celular, un botón corto; en pantallas más anchas, el texto completo */}
+          <Link href="/registro" className={buttonVariants({ size: "sm", className: "h-10 px-4" })}>
+            <span className="sm:hidden">Registrarme</span>
+            <span className="hidden sm:inline">Quiero ser referente</span>
           </Link>
         </nav>
       </div>

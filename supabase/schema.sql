@@ -220,6 +220,13 @@ create table if not exists public.referentes (
   updated_at   timestamptz not null default now()
 );
 
+-- Autorización de tratamiento de datos del referente (Ley 1581 de 2012):
+-- versión de la política que aceptó y cuándo. Quedan vacías en los
+-- referentes que se registraron antes de pedir la casilla.
+alter table public.referentes add column if not exists autoriza_datos   boolean;
+alter table public.referentes add column if not exists autorizado_en    timestamptz;
+alter table public.referentes add column if not exists version_politica text;
+
 drop trigger if exists referentes_updated_at on public.referentes;
 create trigger referentes_updated_at
   before update on public.referentes
@@ -238,13 +245,19 @@ set search_path = public
 as $$
 begin
   if coalesce(new.raw_user_meta_data ->> 'rol', '') = 'referente' then
-    insert into public.referentes (id, nombre, correo, telefono, cuenta_dropi)
+    insert into public.referentes (
+      id, nombre, correo, telefono, cuenta_dropi,
+      autoriza_datos, autorizado_en, version_politica
+    )
     values (
       new.id,
       trim(new.raw_user_meta_data ->> 'nombre'),
       lower(trim(new.email)),
       trim(new.raw_user_meta_data ->> 'telefono'),
-      trim(new.raw_user_meta_data ->> 'cuenta_dropi')
+      trim(new.raw_user_meta_data ->> 'cuenta_dropi'),
+      (new.raw_user_meta_data ->> 'autoriza_datos') = 'true',
+      case when (new.raw_user_meta_data ->> 'autoriza_datos') = 'true' then now() end,
+      nullif(trim(new.raw_user_meta_data ->> 'version_politica'), '')
     )
     on conflict (id) do nothing;
   end if;

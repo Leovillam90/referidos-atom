@@ -1,8 +1,10 @@
-const pesos = new Intl.NumberFormat("es-CO", {
-  style: "currency",
-  currency: "COP",
-  maximumFractionDigits: 0,
-});
+/** Pesos colombianos sin espacio y con punto de miles: 20000 → "$20.000". */
+export function pesosCOP(n: number) {
+  const miles = Math.abs(Math.round(n))
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${n < 0 ? "-" : ""}$${miles}`;
+}
 
 const fecha = new Intl.DateTimeFormat("es-CO", {
   day: "numeric",
@@ -14,7 +16,7 @@ const fecha = new Intl.DateTimeFormat("es-CO", {
 export function formatoPesos(valor: number | string | null | undefined) {
   if (valor === null || valor === undefined || valor === "") return "—";
   const n = typeof valor === "number" ? valor : Number(valor);
-  return Number.isFinite(n) ? pesos.format(n) : "—";
+  return Number.isFinite(n) ? pesosCOP(n) : "—";
 }
 
 export function formatoFecha(iso: string) {

@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Campo } from "@/components/campo";
+import { CampoTrampa } from "@/components/campo-trampa";
+import { CasillaAutorizacion } from "@/components/casilla-autorizacion";
 import { cn } from "@/lib/utils";
 import type { PlanBasico } from "@/lib/estados";
 import type { EstadoFormulario } from "../../acciones";
@@ -113,43 +114,12 @@ export function FormularioReferido({ codigo, planes }: { codigo: string; planes:
         )}
       </fieldset>
 
-      <div className="grid gap-1.5">
-        <label className="flex cursor-pointer items-start gap-3 text-sm">
-          <input
-            type="checkbox"
-            name="autoriza_datos"
-            className="mt-0.5 size-4 shrink-0 accent-primary"
-            aria-invalid={e.autoriza_datos ? true : undefined}
-            aria-describedby={e.autoriza_datos ? "autoriza_datos-error" : undefined}
-            required
-          />
-          <span className="text-muted-foreground">
-            Autorizo a ATOM a tratar mis datos personales para contactarme y gestionar el programa de
-            referidos, según la{" "}
-            <Link
-              href="/politica-datos"
-              target="_blank"
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
-              política de tratamiento de datos
-            </Link>{" "}
-            (Ley 1581 de 2012).
-          </span>
-        </label>
-        {e.autoriza_datos && (
-          <p id="autoriza_datos-error" className="text-xs text-destructive">
-            {e.autoriza_datos}
-          </p>
-        )}
-      </div>
+      <CasillaAutorizacion
+        finalidad="contactarme y gestionar el programa de referidos"
+        error={e.autoriza_datos}
+      />
 
-      {/* Campo trampa para robots: oculto para las personas */}
-      <div aria-hidden className="absolute -left-[9999px] h-0 overflow-hidden">
-        <label>
-          No llenar
-          <input type="text" name="sitio_web" tabIndex={-1} autoComplete="off" />
-        </label>
-      </div>
+      <CampoTrampa />
 
       {estado.mensaje && !estado.ok && (
         <p role="alert" className="text-sm text-destructive">

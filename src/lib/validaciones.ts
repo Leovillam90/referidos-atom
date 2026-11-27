@@ -26,6 +26,11 @@ export const campoCuentaDropi = z
   .min(2, { error: "Escribe tu cuenta Dropi" })
   .max(120, { error: "Máximo 120 caracteres" });
 
+// Un checkbox marcado envía "on"; si no se marca, no envía nada.
+const campoAutorizaDatos = z.literal("on", {
+  error: "Debes aceptar la política de tratamiento de datos para continuar",
+});
+
 export const esquemaRegistroReferente = z.object({
   nombre: z
     .string({ error: "Escribe tu nombre" })
@@ -35,6 +40,7 @@ export const esquemaRegistroReferente = z.object({
   correo: campoCorreo,
   telefono: campoTelefono,
   cuenta_dropi: campoCuentaDropi,
+  autoriza_datos: campoAutorizaDatos,
 });
 
 export const esquemaIngreso = z.object({
@@ -64,10 +70,7 @@ export const esquemaReferido = z.object({
   telefono: campoTelefono,
   cuenta_dropi: campoCuentaDropi,
   tipo: z.enum(["proveedor", "marca"], { error: "Elige si eres proveedor o marca" }),
-  // Un checkbox marcado envía "on"; si no se marca, no envía nada.
-  autoriza_datos: z.literal("on", {
-    error: "Debes aceptar la política de tratamiento de datos para continuar",
-  }),
+  autoriza_datos: campoAutorizaDatos,
 });
 
 /** Pesos colombianos escritos por el super_admin: "150.000", "150000", "$150.000". */
