@@ -51,7 +51,7 @@ export function Mascota({
             alt={alt}
             priority={prioridad}
             fetchPriority={prioridad ? "high" : undefined}
-            className={cn("h-auto w-full select-none", asomadaEnMovil && "max-lg:[mask-image:linear-gradient(to_bottom,#000_52%,transparent_80%)]")}
+            className="h-auto w-full select-none"
             draggable={false}
           />
         </div>
@@ -60,7 +60,15 @@ export function Mascota({
   );
 
   return (
-    <div className={cn("relative isolate", className)}>
+    <div
+      className={cn(
+        "relative isolate",
+        // Recorte recto abajo (clip-path es casi gratis para la GPU; una máscara con
+        // desvanecido hacía lento el celular). Arriba y a los lados no recorta.
+        asomadaEnMovil && "max-lg:[clip-path:inset(-40%_-40%_18%_-40%)]",
+        className,
+      )}
+    >
       {halo && (
         <div
           aria-hidden
