@@ -31,8 +31,5 @@ export function formatoFechaHoraIso(iso: string | null | undefined) {
     .slice(0, 16);
 }
 
-/** 3001234567 → 300 123 4567 */
-export function formatoTelefono(t: string) {
-  const d = t.replace(/\D/g, "");
-  return d.length === 10 ? `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` : t;
-}
+/** 573104827756 → +57 310 482 7756 (la función única está en telefono.ts) */
+export { formatoTelefono } from "./telefono";

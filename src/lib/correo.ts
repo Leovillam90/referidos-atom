@@ -85,26 +85,83 @@ export function correoNuevoReferido(d: {
   referidoNombre: string;
   plan: string | null;
   bono: number | null;
+  yaCliente: boolean;
+  diasVigencia: number | null;
 }) {
   const plan = d.plan ?? "Sin plan definido";
   const bono = d.bono !== null ? formatoPesos(d.bono) : "Por definir";
   const panel = `${urlSitio()}/panel`;
+  const plazo = d.diasVigencia
+    ? `Tiene ${d.diasVigencia} días para activarse en ATOM para que el bono cuente para ti.`
+    : "El bono se confirma cuando tu referido quede activo en ATOM.";
+  const lineas = d.yaCliente
+    ? {
+        texto: `Plan de interés: ${plan}
+
+Esta persona ya era cliente de ATOM, por eso este registro no genera bono.`,
+        html: [
+          `Plan de interés: <strong>${escapar(plan)}</strong>`,
+          `Esta persona <strong>ya era cliente de ATOM</strong>, por eso este registro no genera bono.`,
+        ],
+      }
+    : {
+        texto: `Plan de interés: ${plan}
+Bono estimado: ${bono}
+
+${plazo}`,
+        html: [`Plan de interés: <strong>${escapar(plan)}</strong><br>Bono estimado: <strong>${bono}</strong>`, plazo],
+      };
   return {
     asunto: `Nuevo referido: ${d.referidoNombre}`,
     texto:
-      `Hola ${primerNombre(d.referenteNombre)},\n\n` +
-      `${d.referidoNombre} se registró con tu link de referido.\n` +
-      `Plan de interés: ${plan}\nBono estimado: ${bono}\n\n` +
-      `El bono se confirma cuando tu referido quede activo en ATOM.\nVer tu panel: ${panel}`,
+      `Hola ${primerNombre(d.referenteNombre)},
+
+` +
+      `${d.referidoNombre} se registró con tu link de referido.
+` +
+      `${lineas.texto}
+Ver tu panel: ${panel}`,
     html: plantilla(
       "¡Tienes un nuevo referido!",
       [
         `Hola ${escapar(primerNombre(d.referenteNombre))},`,
         `<strong>${escapar(d.referidoNombre)}</strong> se registró con tu link de referido.`,
-        `Plan de interés: <strong>${escapar(plan)}</strong><br>Bono estimado: <strong>${bono}</strong>`,
-        `El bono se confirma cuando tu referido quede activo en ATOM.`,
+        ...lineas.html,
       ],
       { texto: "Ver mi panel", url: panel },
+    ),
+  };
+}
+
+/** Al referido: confirmar que de verdad lo invitó ese referente. */
+export function correoConfirmacionReferido(d: {
+  referidoNombre: string;
+  referenteNombre: string;
+  url: string;
+  diasVigencia: number;
+}) {
+  return {
+    asunto: `Confirma tu registro en ATOM`,
+    texto:
+      `Hola ${primerNombre(d.referidoNombre)},
+
+` +
+      `Recibimos tu registro en el programa de referidos de ATOM.
+` +
+      `Confirma que te invitó ${d.referenteNombre} abriendo este link:
+${d.url}
+
+` +
+      `El link sirve durante ${d.diasVigencia} días. Si no conoces a esta persona o no te registraste, ignora este correo.`,
+    html: plantilla(
+      "Confirma tu registro",
+      [
+        `Hola ${escapar(primerNombre(d.referidoNombre))},`,
+        `Recibimos tu registro en el programa de referidos de ATOM.`,
+        `Confirma que te invitó <strong>${escapar(d.referenteNombre)}</strong>.`,
+        `El link sirve durante ${d.diasVigencia} días. Si no conoces a esta persona o no te registraste, ignora este correo.`,
+      ],
+      { texto: "Sí, confirmo mi registro", url: d.url },
     ),
   };
 }

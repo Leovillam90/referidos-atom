@@ -10,6 +10,12 @@ import { cn } from "cn"
  *   por_pagar → rosa #C81FDA con texto blanco en negrita (4.5:1)
  *   pagado    → verde #0DE8C0 con texto #1D2935 (9.4:1)
  *   no_aplica → gris, solo borde (texto 6:1)
+ *   pendiente_confirmacion → borde azul, texto #B9C7EA sobre el fondo oscuro (9:1)
+ *   en_verificacion → borde rosa, texto #F0A8F7 (8:1)
+ *   vencido   → gris con borde punteado (texto 6:1)
+ *   ya_cliente → borde verde, texto verde #0DE8C0 (9:1)
+ *   posible_auto_referido / afiliado_duplicado → en revisión: borde y texto
+ *     del color de error (mismo contraste que los mensajes de error)
  */
 const badgeVariants = cva(
   "group/badge inline-flex h-6 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-full border border-transparent px-2.5 text-xs font-bold whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&>svg]:pointer-events-none [&>svg]:size-3!",
@@ -30,6 +36,12 @@ const badgeVariants = cva(
         por_pagar: "bg-steel-pink text-white",
         pagado: "bg-sea-green text-dark-gunmetal",
         no_aplica: "border-[#7a8899] bg-transparent text-muted-foreground",
+        pendiente_confirmacion: "border-silver-lake-blue bg-transparent text-[#b9c7ea]",
+        en_verificacion: "border-steel-pink bg-steel-pink/10 text-[#f0a8f7]",
+        vencido: "border-dashed border-[#7a8899] bg-transparent text-muted-foreground",
+        ya_cliente: "border-sea-green/70 bg-transparent text-sea-green",
+        posible_auto_referido: "border-destructive bg-destructive/10 text-destructive",
+        afiliado_duplicado: "border-dashed border-destructive bg-destructive/10 text-destructive",
       },
     },
     defaultVariants: {

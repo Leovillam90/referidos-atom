@@ -9,7 +9,8 @@ export type ReferidoAdmin = {
   referente_id: string;
   nombre: string | null;
   correo: string;
-  telefono: string;
+  telefono: string; // formato estándar (E.164 sin "+")
+  telefono_pais: string | null;
   cuenta_dropi: string;
   tipo: "proveedor" | "marca";
   plan_solicitado: string | null;
@@ -23,8 +24,22 @@ export type ReferidoAdmin = {
   cruce_actualizado_en: string | null;
   autorizado_en: string;
   version_politica: string;
+  requiere_confirmacion: boolean;
+  confirmado_en: string | null;
+  vence_en: string | null;
+  vencido_en: string | null;
+  en_hoja: boolean | null;
+  cliente_previo: boolean | null;
+  fecha_activacion: string | null;
+  fecha_activacion_origen: "hoja" | "cruce" | null;
+  activo_desde: string | null;
+  bono_fijado_en: string | null;
+  fecha_por_pagar: string | null;
+  por_pagar_desde: string | null;
+  es_referente: boolean;
+  revision: "posible_auto_referido" | "afiliado_duplicado" | null;
   created_at: string;
-  referente: { nombre: string; correo: string; codigo: string } | null;
+  referente: { nombre: string; correo: string; codigo: string; suspendido: boolean } | null;
   pago: { id: string; fecha_pago: string; valor_pagado: number | string } | null;
 };
 
@@ -32,14 +47,23 @@ export type ReferenteAdmin = {
   id: string;
   nombre: string;
   correo: string;
-  telefono: string;
+  telefono: string; // formato estándar (E.164 sin "+")
+  telefono_pais: string | null;
   cuenta_dropi: string;
   codigo: string;
   activo: boolean;
+  suspendido: boolean;
+  suspendido_en: string | null;
+  motivo_suspension: string | null;
+  autorizado_en: string | null;
+  version_politica: string | null;
+  terminos_aceptados_en: string | null;
+  version_terminos: string | null;
   created_at: string;
 };
 
-export type Totales = { estimado: number; por_pagar: number; pagado: number; no_aplica: number };
+/** Totales en pesos. "estimado" incluye los pendientes de confirmación. */
+export type Totales = { estimado: number; en_verificacion: number; por_pagar: number; pagado: number };
 
 export type ResumenReferente = ReferenteAdmin & {
   referidos: number;
@@ -61,7 +85,16 @@ export type HistorialItem = {
   id: string;
   usuario_correo: string | null;
   accion: string;
+  motivo: string | null;
   cambios: Record<string, { antes: unknown; despues: unknown }>;
+  created_at: string;
+};
+
+export type HistorialReferente = {
+  id: string;
+  usuario_correo: string | null;
+  accion: string;
+  motivo: string | null;
   created_at: string;
 };
 
@@ -102,9 +135,12 @@ async function traerTodo<T>(
 }
 
 const COLUMNAS_REFERIDO =
-  "id, referente_id, nombre, correo, telefono, cuenta_dropi, tipo, plan_solicitado, plan_hoja, plan_afiliado_id, " +
+  "id, referente_id, nombre, correo, telefono, telefono_pais, cuenta_dropi, tipo, plan_solicitado, plan_hoja, plan_afiliado_id, " +
   "afiliado_atom, cruce_por, bono, estado_bono, editado_manual, cruce_actualizado_en, autorizado_en, " +
-  "version_politica, created_at, referente:referentes(nombre, correo, codigo), pago:pagos(id, fecha_pago, valor_pagado)";
+  "version_politica, requiere_confirmacion, confirmado_en, vence_en, vencido_en, en_hoja, cliente_previo, " +
+  "fecha_activacion, fecha_activacion_origen, activo_desde, bono_fijado_en, fecha_por_pagar, por_pagar_desde, " +
+  "es_referente, revision, " +
+  "created_at, referente:referentes(nombre, correo, codigo, suspendido), pago:pagos(id, fecha_pago, valor_pagado)";
 
 /** Filtro de la vista de referidos: un estado del bono o "sin_cruce". */
 export type FiltroReferidos = EstadoBono | "sin_cruce" | "todos";
@@ -139,18 +175,31 @@ export async function traerReferido(supabase: SupabaseClient, id: string) {
 }
 
 export function calcularTotales(referidos: Pick<ReferidoAdmin, "estado_bono" | "bono">[]): Totales {
-  const t: Totales = { estimado: 0, por_pagar: 0, pagado: 0, no_aplica: 0 };
+  const t: Totales = { estimado: 0, en_verificacion: 0, por_pagar: 0, pagado: 0 };
   for (const r of referidos) {
-    if (r.estado_bono !== "no_aplica") t[r.estado_bono] += Number(r.bono) || 0;
+    const valor = Number(r.bono) || 0;
+    if (r.estado_bono === "estimado" || r.estado_bono === "pendiente_confirmacion") t.estimado += valor;
+    else if (r.estado_bono === "en_verificacion" || r.estado_bono === "por_pagar" || r.estado_bono === "pagado")
+      t[r.estado_bono] += valor;
   }
   return t;
 }
+
+/** Cuántos referidos en ese estado se registraron en los últimos `dias` días. */
+export function contarRecientes(referidos: ReferidoAdmin[], estado: EstadoBono, dias: number) {
+  const desde = Date.now() - dias * 86_400_000;
+  return referidos.filter((r) => r.estado_bono === estado && new Date(r.created_at).getTime() >= desde).length;
+}
+
+export const COLUMNAS_REFERENTE =
+  "id, nombre, correo, telefono, telefono_pais, cuenta_dropi, codigo, activo, suspendido, suspendido_en, motivo_suspension, " +
+  "autorizado_en, version_politica, terminos_aceptados_en, version_terminos, created_at";
 
 export async function traerReferentes(supabase: SupabaseClient) {
   return traerTodo<ReferenteAdmin>((desde, hasta) =>
     supabase
       .from("referentes")
-      .select("id, nombre, correo, telefono, cuenta_dropi, codigo, activo, created_at")
+      .select(COLUMNAS_REFERENTE)
       .order("created_at", { ascending: false })
       .range(desde, hasta)
       .returns<ReferenteAdmin[]>(),
@@ -199,11 +248,40 @@ export async function traerPagos(supabase: SupabaseClient, referenteId?: string)
 export async function traerHistorial(supabase: SupabaseClient, referidoId: string) {
   const { data, error } = await supabase
     .from("referidos_historial")
-    .select("id, usuario_correo, accion, cambios, created_at")
+    .select("id, usuario_correo, accion, motivo, cambios, created_at")
     .eq("referido_id", referidoId)
     .order("created_at", { ascending: false })
     .limit(200)
     .returns<HistorialItem[]>();
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export async function traerHistorialReferente(supabase: SupabaseClient, referenteId: string) {
+  const { data, error } = await supabase
+    .from("referentes_historial")
+    .select("id, usuario_correo, accion, motivo, created_at")
+    .eq("referente_id", referenteId)
+    .order("created_at", { ascending: false })
+    .limit(100)
+    .returns<HistorialReferente[]>();
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/** Un celular que aparece en 3 o más registros (posible fraude: se revisa, no se bloquea). */
+export type TelefonoSospechoso = {
+  telefono: string;
+  registros: number;
+  referentes: string[];
+  referidos: string[];
+};
+
+export async function traerTelefonosSospechosos(supabase: SupabaseClient): Promise<TelefonoSospechoso[]> {
+  const { data, error } = await supabase.rpc("telefonos_sospechosos");
+  if (error) {
+    console.error("[admin] teléfonos sospechosos:", error.message);
+    return [];
+  }
+  return (data ?? []) as TelefonoSospechoso[];
 }

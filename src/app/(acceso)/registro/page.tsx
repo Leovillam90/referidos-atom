@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ConMascota } from "@/components/marco-acceso";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { claveSitioTurnstile } from "@/lib/turnstile";
 import { FormularioRegistro } from "./formulario-registro";
 
 export const metadata: Metadata = { title: "Registro de referentes · Referidos ATOM" };
@@ -18,7 +19,7 @@ export default function PaginaRegistro() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <FormularioRegistro />
+        <FormularioRegistro claveTurnstile={claveSitioTurnstile()} />
       </CardContent>
       <CardFooter className="text-sm text-muted-foreground">
         ¿Ya estás registrado?&nbsp;

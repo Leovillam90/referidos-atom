@@ -14,17 +14,22 @@ import {
 } from "@/components/ui/table";
 import {
   calcularTotales,
+  COLUMNAS_REFERENTE,
   exigirSuperAdmin,
+  traerHistorialReferente,
   traerPagos,
   traerReferidos,
+  traerTelefonosSospechosos,
   type ReferenteAdmin,
 } from "@/lib/datos-admin";
+import { AvisoTelefonoSospechoso, CelularWhatsApp } from "@/components/celular-whatsapp";
 import { nombrePlan } from "@/lib/estados";
-import { formatoFecha, formatoFechaHoraIso, formatoPesos, formatoTelefono } from "@/lib/formato";
+import { formatoFecha, formatoFechaHoraIso, formatoPesos } from "@/lib/formato";
 import { traerPlanes } from "@/lib/planes";
 import { EncabezadoAdmin } from "../../encabezado";
 import { TablaReferidos } from "../../tabla-referidos";
 import { FormularioPago } from "./formulario-pago";
+import { FormularioSuspension } from "./formulario-suspension";
 
 export const metadata: Metadata = { title: "Referente · Administración · Referidos ATOM" };
 
@@ -44,17 +49,15 @@ async function Contenido({ id }: { id: string }) {
   const { supabase } = await exigirSuperAdmin();
   if (!z.uuid().safeParse(id).success) return <NoEncontrado />;
 
-  const [{ data: referente }, referidos, planes, pagos] = await Promise.all([
-    supabase
-      .from("referentes")
-      .select("id, nombre, correo, telefono, cuenta_dropi, codigo, activo, created_at")
-      .eq("id", id)
-      .maybeSingle<ReferenteAdmin>(),
+  const [{ data: referente }, referidos, planes, pagos, historial] = await Promise.all([
+    supabase.from("referentes").select(COLUMNAS_REFERENTE).eq("id", id).maybeSingle<ReferenteAdmin>(),
     traerReferidos(supabase, { referenteId: id }),
     traerPlanes(supabase),
     traerPagos(supabase, id),
+    traerHistorialReferente(supabase, id),
   ]);
   if (!referente) return <NoEncontrado />;
+  const sospechoso = (await traerTelefonosSospechosos(supabase)).find((s) => s.referentes.includes(referente.id));
 
   const totales = calcularTotales(referidos);
   const porPagar = referidos
@@ -75,17 +78,63 @@ async function Contenido({ id }: { id: string }) {
         </Link>
         <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{referente.nombre}</h1>
         <p className="text-sm text-muted-foreground">
-          {referente.correo} · {formatoTelefono(referente.telefono)} · Dropi: {referente.cuenta_dropi} · Código{" "}
+          {referente.correo} · <CelularWhatsApp telefono={referente.telefono} /> · Dropi: {referente.cuenta_dropi} · Código{" "}
           <span className="font-mono">{referente.codigo}</span>
           {!referente.activo && <span className="text-destructive"> · link inactivo</span>}
+          {referente.suspendido && <span className="font-bold text-destructive"> · SUSPENDIDO</span>}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Términos:{" "}
+          {referente.terminos_aceptados_en
+            ? `aceptó la versión ${referente.version_terminos ?? "—"} el ${formatoFechaHoraIso(referente.terminos_aceptados_en)}`
+            : "sin registro (se registró antes de pedirlos)"}
+          {" · "}Política de datos:{" "}
+          {referente.autorizado_en
+            ? `versión ${referente.version_politica ?? "—"} el ${formatoFechaHoraIso(referente.autorizado_en)}`
+            : "sin registro"}
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
+      {sospechoso && (
+        <div role="alert" className="grid gap-1 rounded-3xl border border-destructive/60 bg-destructive/10 p-4 text-sm">
+          <AvisoTelefonoSospechoso registros={sospechoso.registros} />
+        </div>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         <Resumen titulo="Estimado" valor={formatoPesos(totales.estimado)} />
+        <Resumen titulo="En verificación" valor={formatoPesos(totales.en_verificacion)} />
         <Resumen titulo="Por pagar" valor={formatoPesos(totales.por_pagar)} />
         <Resumen titulo="Pagado" valor={formatoPesos(totales.pagado)} />
       </div>
+
+      <Card className={referente.suspendido ? "border-destructive/60" : undefined}>
+        <CardHeader>
+          <CardTitle>{referente.suspendido ? "Referente suspendido" : "Suspender referente"}</CardTitle>
+          <CardDescription>
+            {referente.suspendido
+              ? `Desde el ${formatoFecha(referente.suspendido_en ?? referente.created_at)}. Motivo: ${referente.motivo_suspension ?? "—"}. ` +
+                "Al reactivarlo, sus referidos vuelven a seguir las reglas (los que mientras tanto registró otro referente quedan vencidos)."
+              : "Un referente suspendido no puede entrar a su panel ni recibir referidos nuevos (su link dice «Este link no está disponible»), y sus bonos no pagados pasan a «no aplica». Se puede reactivar."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <FormularioSuspension id={referente.id} suspendido={referente.suspendido} />
+          {historial.length > 0 && (
+            <ol className="grid gap-2 border-t pt-4 text-sm">
+              {historial.map((h) => (
+                <li key={h.id} className="grid gap-0.5">
+                  <span>
+                    <span className="font-medium">{h.accion}</span>
+                    <span className="text-muted-foreground"> · {formatoFechaHoraIso(h.created_at)} · {h.usuario_correo ?? "Sistema"}</span>
+                  </span>
+                  {h.motivo && <span className="text-muted-foreground">Motivo: {h.motivo}</span>}
+                </li>
+              ))}
+            </ol>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

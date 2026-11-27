@@ -8,10 +8,13 @@ import { correoPagoRegistrado, enviarCorreo } from "@/lib/correo";
 import { verificarSuperAdmin } from "@/lib/datos-admin";
 import { formatoFecha } from "@/lib/formato";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
+import { ejemploCelular, esPaisPermitido, formatoEstandarPosible, formatoTelefono } from "@/lib/telefono";
 import {
   erroresPorCampo,
   esquemaEdicionReferido,
+  esquemaMotivo,
   esquemaPago,
+  esquemaReglas,
   MAX_SOPORTE_BYTES,
   TIPOS_SOPORTE,
 } from "@/lib/validaciones";
@@ -47,11 +50,18 @@ export async function actualizarCruce(): Promise<EstadoCruce> {
       ok: true,
       mensaje:
         `Listo: se revisaron ${r.revisados} referidos contra ${r.filasHoja} filas de la hoja. ` +
-        `${r.activos} están activos (${r.porCorreo} por correo, ${r.porTelefono} por teléfono) y ` +
-        `${r.sinCruce} sin cruce. ${r.cambios} cambiaron desde el último cruce.` +
-        (r.omitidos ? ` ${r.omitidos} no se tocaron por estar pagados o editados a mano.` : "") +
+        `${r.activos} están activos (ESTADO activo), ${r.enHojaNoActivos} aparecen con otro estado y ` +
+        `${r.sinCruce} no aparecen. ${r.cambios} cambiaron desde el último cruce.` +
+        (r.vencidos ? ` ${r.vencidos} vencieron por pasar el plazo sin activarse.` : "") +
+        (r.telefonosInvalidosHoja
+          ? ` ${r.telefonosInvalidosHoja} filas de la hoja tienen un TELEFONO inválido: se cruzaron solo por buyer_email.`
+          : "") +
+        (r.omitidos ? ` ${r.omitidos} no se tocaron (pagados, vencidos, ya clientes o editados a mano).` : "") +
         (r.sinPlan
           ? ` Atención: ${r.sinPlan} activos tienen un plan en la hoja que no coincide con la tabla de planes (quedan sin bono).`
+          : "") +
+        (r.enRevision
+          ? ` Atención: ${r.enRevision} referidos están en revisión (posible auto-referido o afiliado que ya generó bono): no generan bono hasta que los revises.`
           : ""),
     };
   } catch (e) {
@@ -81,17 +91,22 @@ export async function editarReferido(_anterior: EstadoEdicion, formData: FormDat
     afiliado_atom: leer(formData, "afiliado_atom"),
     bono: leer(formData, "bono"),
     estado_bono: leer(formData, "estado_bono"),
+    vence_en: leer(formData, "vence_en"),
+    motivo: leer(formData, "motivo"),
   });
   if (!resultado.success) return { ok: false, errores: erroresPorCampo(resultado.error) };
   const d = resultado.data;
 
-  // La función de la base de datos marca editado_manual = true y deja historial
+  // La función de la base de datos marca editado_manual = true y deja
+  // historial con el motivo
   const { error } = await supabase.rpc("editar_referido", {
     p_id: d.id,
     p_plan_afiliado_id: d.plan_afiliado_id,
     p_afiliado_atom: d.afiliado_atom,
     p_bono: d.bono,
     p_estado: d.estado_bono,
+    p_vence_en: d.vence_en,
+    p_motivo: d.motivo,
   });
   if (error) {
     console.error("[admin] editar referido:", error.code, error.message);
@@ -99,15 +114,17 @@ export async function editarReferido(_anterior: EstadoEdicion, formData: FormDat
   }
 
   refresh();
-  return { ok: true, mensaje: "Cambios guardados. Este referido ya no lo cambia el cruce con la hoja." };
+  return { ok: true, mensaje: "Excepción guardada. Las reglas y el cruce con la hoja ya no cambian este referido." };
 }
 
 export async function volverAUsarHoja(_anterior: EstadoEdicion, formData: FormData): Promise<EstadoEdicion> {
   const { supabase, esSuperAdmin } = await verificarSuperAdmin();
   if (!esSuperAdmin) return { ok: false, mensaje: SIN_PERMISO };
 
-  const id = leer(formData, "id");
-  const { error } = await supabase.rpc("volver_a_usar_hoja", { p_id: id });
+  const resultado = esquemaMotivo.safeParse({ id: leer(formData, "id"), motivo: leer(formData, "motivo") });
+  if (!resultado.success) return { ok: false, errores: erroresPorCampo(resultado.error) };
+  const { id, motivo } = resultado.data;
+  const { error } = await supabase.rpc("volver_a_usar_hoja", { p_id: id, p_motivo: motivo });
   if (error) {
     console.error("[admin] volver a usar la hoja:", error.code, error.message);
     return { ok: false, mensaje: mensajeBD(error) };
@@ -126,7 +143,103 @@ export async function volverAUsarHoja(_anterior: EstadoEdicion, formData: FormDa
   }
 
   refresh();
-  return { ok: true, mensaje: "Listo: el referido volvió a seguir la hoja de afiliados." };
+  return { ok: true, mensaje: "Listo: el referido volvió a seguir las reglas y la hoja de afiliados." };
+}
+
+// ---------------------------------------------------------------------
+// Suspensión de referentes
+// ---------------------------------------------------------------------
+export async function cambiarSuspension(_anterior: EstadoEdicion, formData: FormData): Promise<EstadoEdicion> {
+  const { supabase, esSuperAdmin } = await verificarSuperAdmin();
+  if (!esSuperAdmin) return { ok: false, mensaje: SIN_PERMISO };
+
+  const resultado = esquemaMotivo.safeParse({ id: leer(formData, "id"), motivo: leer(formData, "motivo") });
+  if (!resultado.success) return { ok: false, errores: erroresPorCampo(resultado.error) };
+  const { id, motivo } = resultado.data;
+  const suspender = leer(formData, "accion") === "suspender";
+
+  const { error } = await supabase.rpc(suspender ? "suspender_referente" : "reactivar_referente", {
+    p_id: id,
+    p_motivo: motivo,
+  });
+  if (error) {
+    console.error("[admin] suspensión:", error.code, error.message);
+    return { ok: false, mensaje: mensajeBD(error) };
+  }
+
+  refresh();
+  return {
+    ok: true,
+    mensaje: suspender
+      ? "Referente suspendido. Sus bonos no pagados pasaron a «no aplica» y su link ya no recibe referidos."
+      : "Referente reactivado. Sus referidos volvieron a seguir las reglas.",
+  };
+}
+
+// ---------------------------------------------------------------------
+// Reglas del programa
+// ---------------------------------------------------------------------
+export async function guardarReglas(_anterior: EstadoEdicion, formData: FormData): Promise<EstadoEdicion> {
+  const { supabase, esSuperAdmin } = await verificarSuperAdmin();
+  if (!esSuperAdmin) return { ok: false, mensaje: SIN_PERMISO };
+
+  const resultado = esquemaReglas.safeParse({
+    dias_vigencia_registro: leer(formData, "dias_vigencia_registro"),
+    dias_permanencia_para_pagar: leer(formData, "dias_permanencia_para_pagar"),
+    confirmacion_referido_por_correo: leer(formData, "confirmacion_referido_por_correo"),
+    dominios_excluidos: leer(formData, "dominios_excluidos"),
+    max_registros_por_link_por_hora: leer(formData, "max_registros_por_link_por_hora"),
+  });
+  if (!resultado.success) return { ok: false, errores: erroresPorCampo(resultado.error) };
+  const d = resultado.data;
+
+  const { error } = await supabase.rpc("actualizar_reglas", {
+    p_dias_vigencia: d.dias_vigencia_registro,
+    p_dias_permanencia: d.dias_permanencia_para_pagar,
+    p_confirmacion: d.confirmacion_referido_por_correo,
+    p_dominios: d.dominios_excluidos,
+    p_max_por_hora: d.max_registros_por_link_por_hora,
+  });
+  if (error) {
+    console.error("[admin] reglas:", error.code, error.message);
+    return { ok: false, mensaje: mensajeBD(error) };
+  }
+
+  refresh();
+  return { ok: true, mensaje: "Reglas guardadas. Los referidos en curso se recalcularon con los valores nuevos." };
+}
+
+// ---------------------------------------------------------------------
+// Números de celular bloqueados (/admin/reglas)
+// ---------------------------------------------------------------------
+export async function agregarTelefonoBloqueado(_anterior: EstadoEdicion, formData: FormData): Promise<EstadoEdicion> {
+  const { supabase, usuario, esSuperAdmin } = await verificarSuperAdmin();
+  if (!esSuperAdmin || !usuario) return { ok: false, mensaje: SIN_PERMISO };
+
+  const pais = leer(formData, "telefono_pais");
+  const telefono = formatoEstandarPosible(leer(formData, "telefono"), pais);
+  if (!telefono) {
+    return { ok: false, errores: { telefono: `Escribe el número completo (ej. ${ejemploCelular(esPaisPermitido(pais) ? pais : "CO")})` } };
+  }
+  const nota = leer(formData, "nota").trim().slice(0, 200) || null;
+
+  const { error } = await supabase.from("telefonos_bloqueados").insert({ telefono, nota, creado_por: usuario.id });
+  if (error) {
+    if (error.code === "23505") return { ok: false, errores: { telefono: "Ese número ya está bloqueado" } };
+    console.error("[admin] bloquear teléfono:", error.code, error.message);
+    return { ok: false, mensaje: mensajeBD(error) };
+  }
+  refresh();
+  return { ok: true, mensaje: `Listo: ${formatoTelefono(telefono)} ya no se puede usar en ningún registro nuevo.` };
+}
+
+export async function quitarTelefonoBloqueado(formData: FormData): Promise<void> {
+  const { supabase, esSuperAdmin } = await verificarSuperAdmin();
+  if (!esSuperAdmin) return;
+  const telefono = leer(formData, "telefono");
+  const { error } = await supabase.from("telefonos_bloqueados").delete().eq("telefono", telefono);
+  if (error) console.error("[admin] quitar teléfono bloqueado:", error.code, error.message);
+  refresh();
 }
 
 // ---------------------------------------------------------------------

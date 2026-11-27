@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { normalizarCorreo, normalizarTelefono } from "@/lib/telefono";
+import { ESTADOS_MANUALES } from "@/lib/estados";
+import { normalizarCorreo } from "@/lib/telefono";
 
 /** Correo: se guarda siempre en minúsculas y sin espacios. */
 export const campoCorreo = z
@@ -8,17 +9,10 @@ export const campoCorreo = z
   .pipe(z.email({ error: "Escribe un correo válido" }).max(254));
 
 /**
- * Teléfono colombiano: se quitan espacios, guiones y +57.
- * Debe quedar con 10 dígitos: celular (3XX) o fijo (60X).
+ * El CELULAR no va en estos esquemas: se valida con validarCelular()
+ * (src/lib/telefono.ts) y en el servidor con revisarCelular(), porque
+ * depende del país elegido y de la lista de números bloqueados.
  */
-export const campoTelefono = z
-  .string({ error: "Escribe tu teléfono" })
-  .transform((v) => normalizarTelefono(v) ?? "")
-  .pipe(
-    z.string().regex(/^(3\d{9}|60\d{8})$/, {
-      error: "Escribe un número de 10 dígitos (ej. 300 123 4567)",
-    }),
-  );
 
 export const campoCuentaDropi = z
   .string({ error: "Escribe tu cuenta Dropi" })
@@ -38,9 +32,11 @@ export const esquemaRegistroReferente = z.object({
     .min(2, { error: "Escribe tu nombre completo" })
     .max(120, { error: "Máximo 120 caracteres" }),
   correo: campoCorreo,
-  telefono: campoTelefono,
   cuenta_dropi: campoCuentaDropi,
   autoriza_datos: campoAutorizaDatos,
+  acepta_terminos: z.literal("on", {
+    error: "Debes aceptar los términos del programa de referidos para continuar",
+  }),
 });
 
 export const esquemaIngreso = z.object({
@@ -67,7 +63,6 @@ export const esquemaReferido = z.object({
   // Que el plan exista y esté activo se verifica contra la tabla "planes"
   plan_solicitado: z.string().trim().min(1, { error: "Elige el plan que te interesa" }),
   correo: campoCorreo,
-  telefono: campoTelefono,
   cuenta_dropi: campoCuentaDropi,
   tipo: z.enum(["proveedor", "marca"], { error: "Elige si eres proveedor o marca" }),
   autoriza_datos: campoAutorizaDatos,
@@ -80,7 +75,14 @@ const campoPesos = z
   .pipe(z.string().regex(/^\d{1,12}$/, { error: "Escribe un valor en pesos, sin decimales" }))
   .transform(Number);
 
-/** Edición manual de un referido (super_admin). */
+/** Motivo obligatorio de toda excepción o acción del super_admin (queda en el historial). */
+const campoMotivo = z
+  .string({ error: "Escribe el motivo" })
+  .trim()
+  .min(5, { error: "Escribe el motivo (mínimo 5 caracteres)" })
+  .max(500, { error: "Máximo 500 caracteres" });
+
+/** Excepción manual sobre un referido (super_admin). */
 export const esquemaEdicionReferido = z.object({
   id: z.uuid(),
   plan_afiliado_id: z
@@ -93,7 +95,48 @@ export const esquemaEdicionReferido = z.object({
     .trim()
     .transform((v) => v || null)
     .pipe(campoPesos.nullable()),
-  estado_bono: z.enum(["estimado", "por_pagar", "no_aplica"], { error: "Elige un estado" }),
+  estado_bono: z.enum(ESTADOS_MANUALES, { error: "Elige un estado" }),
+  // Nueva fecha límite de la vigencia (opcional, "AAAA-MM-DD", fin del día en Colombia)
+  vence_en: z
+    .string()
+    .trim()
+    .transform((v) => v || null)
+    .pipe(z.iso.date({ error: "Fecha no válida" }).nullable())
+    .transform((v) => (v ? `${v}T23:59:59-05:00` : null)),
+  motivo: campoMotivo,
+});
+
+export const esquemaMotivo = z.object({ id: z.uuid(), motivo: campoMotivo });
+
+/** Reglas del programa (/admin/reglas). */
+const entero = (min: number, max: number, nombre: string) =>
+  z.coerce
+    .number({ error: `Escribe ${nombre}` })
+    .int({ error: "Debe ser un número entero" })
+    .min(min, { error: `Mínimo ${min}` })
+    .max(max, { error: `Máximo ${max}` });
+
+export const esquemaReglas = z.object({
+  dias_vigencia_registro: entero(1, 365, "los días de vigencia"),
+  dias_permanencia_para_pagar: entero(0, 365, "los días de permanencia"),
+  confirmacion_referido_por_correo: z.enum(["si", "no"]).transform((v) => v === "si"),
+  dominios_excluidos: z
+    .string()
+    .transform((v) =>
+      v
+        .toLowerCase()
+        .replace(/\s/g, "")
+        .split(",")
+        .map((d) => d.replace(/^@+/, ""))
+        .filter(Boolean),
+    )
+    .pipe(
+      z.array(
+        z.string().regex(/^([a-z0-9-]+\.)+[a-z]{2,}$/, { error: "Escribe dominios separados por coma, ej. atomapp.com.co" }),
+      ),
+    )
+    .transform((l) => [...new Set(l)].join(",")),
+  max_registros_por_link_por_hora: entero(1, 1000, "el límite por hora"),
 });
 
 /** Registro de un pago (super_admin). */

@@ -14,6 +14,13 @@ import { auth, sheets } from "@googleapis/sheets";
 import nodemailer from "nodemailer";
 import configVercel from "../../vercel.json";
 import { pesosCOP } from "./formato";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { formatoEstandarPosible, validarCelular } from "./telefono";
+import { CASOS_RECHAZADOS, CASOS_VALIDOS } from "./telefono-casos";
+import type { CodigoPais as CasoPais } from "./telefono";
+import { bloqueActual, bloqueSqlCelular } from "./telefono-sql";
+import { SITIO_PRODUCCION } from "./sitio";
 
 export type Estado = "ok" | "error" | "aviso";
 export type Resultado = { estado: Estado; titulo: string; detalle?: string; solucion?: string };
@@ -30,8 +37,8 @@ const VARIABLES: Variable[] = [
   {
     nombre: "NEXT_PUBLIC_SITE_URL",
     para: "dirección pública de la app",
-    donde: "http://localhost:3000 en tu computador; tu dominio https en Vercel.",
-    formato: (v) => (esUrl(v) ? null : "debe ser una dirección completa, ej. https://referidos.atom.com.co"),
+    donde: `http://localhost:3000 en tu computador; ${SITIO_PRODUCCION} en Vercel (Production).`,
+    formato: (v) => (esUrl(v) ? null : `debe ser una dirección completa, ej. ${SITIO_PRODUCCION}`),
   },
   {
     nombre: "NEXT_PUBLIC_SUPABASE_URL",
@@ -80,9 +87,19 @@ const VARIABLES: Variable[] = [
   { nombre: "SHEET_COL_TELEFONO", para: "columna de teléfono", donde: "Título exacto de la columna en la hoja." },
   { nombre: "SHEET_COL_PLAN", para: "columna de plan", donde: "Título exacto de la columna en la hoja." },
   {
+    nombre: "SHEET_COL_ESTADO",
+    para: "saber si el afiliado está activo",
+    donde: "Título exacto de la columna de estado en la hoja, ej. ESTADO MANUAL.",
+  },
+  {
     nombre: "POLITICA_DATOS_VERSION",
     para: "guardar la autorización de datos",
     donde: "Una etiqueta como 2026-11-v1.",
+  },
+  {
+    nombre: "TERMINOS_VERSION",
+    para: "guardar qué versión de los términos aceptó cada referente",
+    donde: "Una etiqueta como 2026-11-v1 (cámbiala cuando cambies /terminos).",
   },
   {
     nombre: "CRON_SECRET",
@@ -109,6 +126,7 @@ const SECRETAS = [
   "CRON_SECRET",
   "SMTP_PASSWORD",
   "SUPABASE_ACCESS_TOKEN",
+  "TURNSTILE_SECRET_KEY",
 ];
 
 // ---------------------------------------------------------------------
@@ -163,6 +181,12 @@ async function conLimite<T>(promesa: PromiseLike<T>, ms = 15000): Promise<T> {
 const ok = (titulo: string, detalle?: string): Resultado => ({ estado: "ok", titulo, detalle });
 const error = (titulo: string, solucion: string, detalle?: string): Resultado => ({ estado: "error", titulo, detalle, solucion });
 const aviso = (titulo: string, solucion: string, detalle?: string): Resultado => ({ estado: "aviso", titulo, detalle, solucion });
+
+/** ¿Se entiende como fecha? (mismos formatos que fechaDeHoja en hoja-afiliados.ts) */
+function esFechaDeHoja(v: unknown) {
+  if (typeof v === "number") return Number.isFinite(v) && v > 0;
+  return /^(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/-]\d{1,2}[/-]\d{4})/.test(String(v ?? "").trim());
+}
 
 /** Igual que public.normalizar_nombre_plan() en schema.sql. */
 function normalizarPlan(t: string | null | undefined) {
@@ -288,8 +312,18 @@ async function revisarSupabase(): Promise<{ grupo: Grupo; admin: SupabaseClient 
 // ---------------------------------------------------------------------
 // 3 y 4. Base de datos, seguridad y datos mínimos
 // ---------------------------------------------------------------------
+type ReglasBD = {
+  dias_vigencia_registro: number;
+  dias_permanencia_para_pagar: number;
+  confirmacion_referido_por_correo: boolean;
+  dominios_excluidos: string;
+  max_registros_por_link_por_hora: number;
+};
+
 type Diagnostico = {
   tablas: { nombre: string; existe: boolean; rls: boolean; politicas: number; anon_lee: boolean | null }[];
+  columnas_faltantes?: string[];
+  reglas?: ReglasBD | null;
   funciones: { nombre: string; existe: boolean }[];
   disparadores: { nombre: string; existe: boolean }[];
   bucket: { publico: boolean; limite: number | null; tipos: string[] | null } | null;
@@ -329,6 +363,15 @@ async function revisarBaseDeDatos(admin: SupabaseClient | null): Promise<{ grupo
       else if (t.anon_lee) bd.push(error(`Tabla ${t.nombre}: los visitantes sin sesión tienen permiso de lectura`, SCHEMA));
       else bd.push(ok(`Tabla ${t.nombre}: existe y tiene RLS activo`, `${t.politicas} regla(s) de acceso`));
     }
+
+    const faltanC = d.columnas_faltantes;
+    if (faltanC === undefined) bd.push(error("La función de diagnóstico es de una versión anterior", SCHEMA));
+    else
+      bd.push(
+        faltanC.length
+          ? error(`Faltan columnas: ${faltanC.join(", ")}`, SCHEMA)
+          : ok("Las columnas de las reglas del programa existen"),
+      );
 
     const faltanF = d.funciones.filter((f) => !f.existe).map((f) => f.nombre);
     bd.push(
@@ -381,6 +424,34 @@ async function revisarBaseDeDatos(admin: SupabaseClient | null): Promise<{ grupo
           ),
     );
 
+  // Reglas del programa
+  const r = d?.reglas;
+  if (d && r === null) {
+    datos.push(error("Falta la fila de reglas_programa", SCHEMA));
+  } else if (r) {
+    const resumen =
+      `Vigencia ${r.dias_vigencia_registro} días · permanencia ${r.dias_permanencia_para_pagar} días · ` +
+      `confirmación por correo: ${r.confirmacion_referido_por_correo ? "sí" : "no"} · ` +
+      `máximo ${r.max_registros_por_link_por_hora} registros por hora`;
+    datos.push(ok("Reglas del programa configuradas", `${resumen}. Se editan en /admin/reglas.`));
+    datos.push(
+      r.dominios_excluidos.trim()
+        ? ok("Dominios excluidos para referentes", r.dominios_excluidos.split(",").join(", "))
+        : aviso(
+            "No hay dominios excluidos: los empleados podrían registrarse como referentes",
+            "Agrégalos en /admin/reglas, ej. atomsolutionsdata.com,atomapp.com.co",
+          ),
+    );
+    if (r.confirmacion_referido_por_correo && !leer("SMTP_HOST")) {
+      datos.push(
+        error(
+          "La confirmación por correo está activa, pero no hay SMTP configurado",
+          "Sin correo nadie puede confirmar y los registros quedan pendientes. Configura SMTP_* o apaga la confirmación en /admin/reglas.",
+        ),
+      );
+    }
+  }
+
   // Planes
   let planes: PlanBD[] | null = null;
   try {
@@ -410,6 +481,107 @@ async function revisarBaseDeDatos(admin: SupabaseClient | null): Promise<{ grupo
   }
 
   return { grupos, planes };
+}
+
+// ---------------------------------------------------------------------
+// Reglas del CELULAR: las de la app (libphonenumber-js) y las de la base
+// de datos (public.problema_telefono) deben dar el mismo resultado.
+// ---------------------------------------------------------------------
+async function revisarCelular(admin: SupabaseClient | null): Promise<Grupo> {
+  const SCHEMA = "Ejecuta de nuevo todo supabase/schema.sql en Supabase → SQL Editor.";
+  const resultados: Resultado[] = [];
+  const grupo = { titulo: "Reglas del celular", resultados };
+
+  // 1. Reglas en la app
+  const fallas = [
+    ...CASOS_VALIDOS.filter((c) => {
+      const r = validarCelular(c.texto, c.pais);
+      return !r.ok || r.telefono !== c.telefono || r.pais !== c.paisFinal;
+    }).map((c) => `debería aceptar ${c.pais} "${c.texto}"`),
+    ...CASOS_RECHAZADOS.filter((c) => validarCelular(c.texto, c.pais).ok).map((c) => `debería rechazar ${c.pais} "${c.texto}"`),
+  ];
+  resultados.push(
+    fallas.length
+      ? error("Las reglas del celular en la app fallan", "Corre npm test para ver el detalle.", fallas.join(" · "))
+      : ok(
+          `Reglas del celular en la app: ${CASOS_VALIDOS.length + CASOS_RECHAZADOS.length} casos de prueba correctos`,
+          "Formato estándar E.164 sin \"+\", solo celulares, sin números falsos (repetidos, secuencias, patrones).",
+        ),
+  );
+
+  // 2. Patrones por país en schema.sql (solo si el archivo está a la mano, ej. en tu computador)
+  const ruta = join(process.cwd(), "supabase", "schema.sql");
+  if (existsSync(ruta)) {
+    const alDia = bloqueActual(readFileSync(ruta, "utf8")) === bloqueSqlCelular();
+    resultados.push(
+      alDia
+        ? ok("supabase/schema.sql tiene los patrones de celular de la versión instalada de libphonenumber-js")
+        : error(
+            "supabase/schema.sql tiene patrones de celular desactualizados",
+            "Corre npm run generar-sql-telefono y vuelve a ejecutar supabase/schema.sql en Supabase.",
+          ),
+    );
+  }
+
+  if (!admin) {
+    resultados.push(error("No se pudieron revisar las reglas del celular en la base de datos", "Primero arregla la conexión con la clave secreta."));
+    return grupo;
+  }
+
+  // 3. Las mismas reglas en la base de datos
+  try {
+    const casos = [
+      ...CASOS_VALIDOS.map((c) => ({ c: `${c.pais} "${c.texto}"`, telefono: c.telefono, pais: c.paisFinal, valido: true })),
+      ...CASOS_RECHAZADOS.map((c) => ({ c: `${c.pais} "${c.texto}"`, telefono: formatoEstandarPosible(c.texto, c.pais), pais: c.pais, valido: false })),
+    ].filter((x): x is { c: string; telefono: string; pais: CasoPais; valido: boolean } => Boolean(x.telefono));
+    const respuestas = await conLimite(
+      Promise.all(casos.map((x) => admin.rpc("problema_telefono", { p_telefono: x.telefono, p_pais: x.pais }))),
+    );
+    const conError = respuestas.find((r) => r.error);
+    if (conError?.error) {
+      resultados.push(error("Falta la función problema_telefono en la base de datos", SCHEMA, limpiar(conError.error.message)));
+    } else {
+      const distintos = casos.filter((x, i) => (respuestas[i].data === null) !== x.valido).map((x) => x.c);
+      resultados.push(
+        distintos.length
+          ? error("La base de datos no valida el celular igual que la app", SCHEMA, distintos.join(" · "))
+          : ok(`La base de datos valida el celular igual que la app (${casos.length} casos)`),
+      );
+    }
+  } catch (e) {
+    resultados.push(error("No se pudieron probar las reglas del celular en la base de datos", SCHEMA, mensaje(e)));
+  }
+
+  // 4. Lista de bloqueados, datos sin convertir y celulares sospechosos (solo cantidades)
+  const { count: bloqueados, error: eB } = await admin.from("telefonos_bloqueados").select("telefono", { count: "exact" }).limit(1);
+  if (eB) resultados.push(error("Falta la tabla telefonos_bloqueados", SCHEMA, limpiar(eB.message)));
+  else resultados.push(ok(`Lista de números bloqueados: ${bloqueados ?? 0} número(s)`, "Se edita en /admin/reglas."));
+
+  const [{ count: fSin, error: eF }, { count: rSin, error: eR }] = await Promise.all([
+    admin.from("referentes").select("id", { count: "exact", head: true }).is("telefono_pais", null),
+    admin.from("referidos").select("id", { count: "exact", head: true }).is("telefono_pais", null),
+  ]);
+  if (eF || eR) resultados.push(error("Faltan las columnas telefono_pais", SCHEMA, limpiar((eF ?? eR)!.message)));
+  else if ((fSin ?? 0) + (rSin ?? 0) > 0)
+    resultados.push(
+      aviso(
+        `${(fSin ?? 0) + (rSin ?? 0)} registros con un celular sin país (no se pudieron convertir al formato estándar)`,
+        "Corre npm run reporte-telefonos para ver cuáles son y corrígelos a mano si hace falta.",
+      ),
+    );
+  else resultados.push(ok("Todos los celulares guardados tienen país y formato estándar"));
+
+  const { data: sospechosos, error: eS } = await admin.rpc("telefonos_sospechosos");
+  if (eS) resultados.push(error("Falta la función telefonos_sospechosos", SCHEMA, limpiar(eS.message)));
+  else {
+    const n = Array.isArray(sospechosos) ? sospechosos.length : 0;
+    resultados.push(
+      n
+        ? aviso(`${n} celular(es) aparecen en 3 o más registros (posible fraude)`, "Revísalos en /admin o con npm run reporte-telefonos.")
+        : ok("Ningún celular aparece en 3 o más registros"),
+    );
+  }
+  return grupo;
 }
 
 // ---------------------------------------------------------------------
@@ -505,6 +677,7 @@ async function revisarHoja(planes: PlanBD[] | null): Promise<Grupo> {
     ["correo", "SHEET_COL_CORREO"],
     ["telefono", "SHEET_COL_TELEFONO"],
     ["plan", "SHEET_COL_PLAN"],
+    ["estado", "SHEET_COL_ESTADO"],
   ] as const) {
     const nombre = leer(variable);
     const i = nombre ? normalizados.indexOf(normalizarTitulo(nombre)) : -1;
@@ -527,6 +700,60 @@ async function revisarHoja(planes: PlanBD[] | null): Promise<Grupo> {
       ? ok(`Se leyeron ${conDatos.length} filas de afiliados`)
       : aviso("La pestaña no tiene filas de afiliados", "Revisa que los datos estén en esa pestaña, debajo de los títulos."),
   );
+
+  // Valores de la columna de estado (no son datos personales)
+  if (indices.estado >= 0) {
+    const activo = (leer("SHEET_VALOR_ACTIVO") || "ACTIVE").toLowerCase();
+    const conteo = new Map<string, number>();
+    for (const f of conDatos) {
+      const v = String(f[indices.estado] ?? "").trim() || "(vacío)";
+      conteo.set(v, (conteo.get(v) ?? 0) + 1);
+    }
+    const lista = [...conteo.entries()].map(([v, c]) => `${v} (${c})`).join(", ");
+    const activos = [...conteo.entries()].filter(([v]) => v.toLowerCase() === activo).reduce((a, [, c]) => a + c, 0);
+    resultados.push(
+      activos > 0
+        ? ok(`${activos} afiliados con el estado activo «${activo.toUpperCase()}»`, `Valores de la columna: ${lista}`)
+        : error(
+            `Ningún afiliado tiene el estado activo «${activo.toUpperCase()}»`,
+            "Revisa SHEET_VALOR_ACTIVO (por defecto ACTIVE): debe ser el valor exacto que significa «activo».",
+            `Valores de la columna: ${lista || "(ninguno)"}`,
+          ),
+    );
+  }
+
+  // Columna opcional con la fecha de activación
+  const colFecha = leer("SHEET_COL_FECHA_ACTIVACION");
+  if (!colFecha) {
+    resultados.push(
+      aviso(
+        "SHEET_COL_FECHA_ACTIVACION no configurada: se usa la fecha en que el cruce detecta el estado activo",
+        "Es opcional. Si la hoja tiene una columna con la fecha de activación, escribe su título en esa variable.",
+      ),
+    );
+  } else {
+    const i = normalizados.indexOf(normalizarTitulo(colFecha));
+    if (i < 0) {
+      resultados.push(
+        error(
+          `Columna de fecha de activación («${colFecha}») no encontrada`,
+          "Corrige SHEET_COL_FECHA_ACTIVACION con el título exacto o bórrala.",
+          `Títulos en la primera fila: ${encontrados}`,
+        ),
+      );
+    } else {
+      const valores = conDatos.map((f) => f[i]).filter((v) => String(v ?? "").trim() !== "");
+      const validas = valores.filter(esFechaDeHoja).length;
+      resultados.push(
+        validas === valores.length
+          ? ok(`Columna de fecha de activación encontrada («${String(titulos[i])}»)`, `${validas} filas con fecha.`)
+          : aviso(
+              `${valores.length - validas} fecha(s) de activación no se entienden`,
+              "Usa formato de fecha de Google Sheets, AAAA-MM-DD o DD/MM/AAAA. Esas filas usan la fecha detectada por el cruce.",
+            ),
+      );
+    }
+  }
 
   // Planes de la hoja que no coinciden con la tabla planes
   if (indices.plan >= 0 && planes) {
@@ -746,14 +973,29 @@ async function revisarSitio(): Promise<Grupo> {
   const AUTH = "Supabase → Authentication → URL Configuration";
 
   if (!esUrl(sitio)) {
-    resultados.push(error("NEXT_PUBLIC_SITE_URL no es válida", "Escribe la dirección completa, ej. http://localhost:3000"));
+    resultados.push(error("NEXT_PUBLIC_SITE_URL no es válida", `Escribe la dirección completa: http://localhost:3000 en tu computador o ${SITIO_PRODUCCION} en producción.`));
     return { titulo: "Sitio y login", resultados };
   }
   const origen = new URL(sitio).origin;
   const local = /localhost|127\.0\.0\.1/.test(origen);
-  if (local && process.env.VERCEL_ENV === "production")
-    resultados.push(error("En producción NEXT_PUBLIC_SITE_URL apunta a localhost", `Ponla con tu dominio https en Vercel y haz Redeploy.`));
-  else resultados.push(ok(`NEXT_PUBLIC_SITE_URL: ${origen}`));
+  // Producción: en Vercel (Production) o con "npm run verificar -- --produccion"
+  const produccion =
+    process.env.VERCEL_ENV === "production" || process.env.VERIFICAR_PRODUCCION === "1";
+  const ARREGLO = `En Vercel → Settings → Environment Variables (Production): NEXT_PUBLIC_SITE_URL = ${SITIO_PRODUCCION} y haz Redeploy.`;
+  if (sitio !== origen)
+    resultados.push(error(`NEXT_PUBLIC_SITE_URL debe ser solo el dominio, sin ruta (${origen})`, ARREGLO));
+  else if (produccion && origen !== SITIO_PRODUCCION)
+    resultados.push(
+      error(`En producción NEXT_PUBLIC_SITE_URL debe ser ${SITIO_PRODUCCION}`, `Hoy es ${origen}. ${ARREGLO}`),
+    );
+  else if (!produccion && !local && origen !== SITIO_PRODUCCION)
+    resultados.push(
+      aviso(
+        `NEXT_PUBLIC_SITE_URL es ${origen}, distinta del dominio oficial`,
+        `En tu computador usa http://localhost:3000; en producción, ${SITIO_PRODUCCION}.`,
+      ),
+    );
+  else resultados.push(ok(`NEXT_PUBLIC_SITE_URL: ${origen}${produccion ? " (producción)" : ""}`));
 
   const token = leer("SUPABASE_ACCESS_TOKEN");
   const ref = leer("NEXT_PUBLIC_SUPABASE_URL").match(/^https:\/\/([a-z0-9]+)\.supabase\.co/)?.[1];
@@ -816,7 +1058,54 @@ async function revisarSitio(): Promise<Grupo> {
 }
 
 // ---------------------------------------------------------------------
-// 9. Cruce diario
+// 9. Anti-robots (Cloudflare Turnstile)
+// ---------------------------------------------------------------------
+async function revisarTurnstile(): Promise<Grupo> {
+  const resultados: Resultado[] = [];
+  const sitio = leer("NEXT_PUBLIC_TURNSTILE_SITE_KEY");
+  const secreta = leer("TURNSTILE_SECRET_KEY");
+  const COMO = "Crea un widget gratis en Cloudflare → Turnstile y copia la Site key y la Secret key (ver .env.example).";
+
+  if (!sitio && !secreta) {
+    resultados.push(
+      aviso(
+        "Turnstile no configurado: los formularios funcionan sin verificación anti-robots",
+        `${COMO} Mientras tanto protegen los límites por hora y el campo trampa.`,
+      ),
+    );
+  } else if (!sitio || !secreta) {
+    resultados.push(
+      error(
+        `Falta ${!sitio ? "NEXT_PUBLIC_TURNSTILE_SITE_KEY" : "TURNSTILE_SECRET_KEY"}`,
+        `Turnstile necesita las dos claves; con una sola queda apagado. ${COMO}`,
+      ),
+    );
+  } else {
+    try {
+      // Con un token inventado, Cloudflare dice si la clave secreta es válida
+      const r = await conLimite(
+        fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+          method: "POST",
+          body: new URLSearchParams({ secret: secreta, response: "prueba-de-configuracion" }),
+        }),
+        10000,
+      );
+      const datos = (await r.json()) as { "error-codes"?: string[] };
+      const codigos = datos["error-codes"] ?? [];
+      resultados.push(
+        codigos.includes("invalid-input-secret")
+          ? error("Cloudflare rechazó TURNSTILE_SECRET_KEY", "Copia de nuevo la Secret key del widget en Cloudflare → Turnstile.")
+          : ok("Turnstile configurado: Cloudflare aceptó la clave secreta", "Protege el formulario del referido y el registro de referentes."),
+      );
+    } catch (e) {
+      resultados.push(aviso("No se pudo comprobar Turnstile con Cloudflare", "Revisa tu conexión a internet.", mensaje(e)));
+    }
+  }
+  return { titulo: "Anti-robots (Cloudflare Turnstile)", resultados };
+}
+
+// ---------------------------------------------------------------------
+// 10. Cruce diario
 // ---------------------------------------------------------------------
 function revisarCron(): Grupo {
   const resultados: Resultado[] = [];
@@ -846,14 +1135,16 @@ function revisarCron(): Grupo {
 export async function verificarConfiguracion(): Promise<Grupo[]> {
   const variables = revisarVariables();
   const { grupo: supabase, admin } = await revisarSupabase();
-  const [{ grupos: bd, planes }, correo, sitio, gracias] = await Promise.all([
+  const [{ grupos: bd, planes }, celular, correo, sitio, gracias, turnstile] = await Promise.all([
     revisarBaseDeDatos(admin),
+    revisarCelular(admin),
     revisarCorreo(),
     revisarSitio(),
     revisarPaginaGracias(),
+    revisarTurnstile(),
   ]);
   const hoja = await revisarHoja(planes);
-  return [variables, supabase, ...bd, hoja, correo, gracias, sitio, revisarCron()];
+  return [variables, supabase, ...bd, celular, hoja, correo, gracias, turnstile, sitio, revisarCron()];
 }
 
 export function contar(grupos: Grupo[]) {

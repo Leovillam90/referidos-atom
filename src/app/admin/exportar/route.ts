@@ -7,11 +7,16 @@ import {
   verificarSuperAdmin,
   type FiltroReferidos,
 } from "@/lib/datos-admin";
-import { esEstadoBono, nombrePlan, tituloEstado } from "@/lib/estados";
+import { esEstadoBono, nombrePlan, SIN_BONO, tituloEstado } from "@/lib/estados";
 import { formatoFechaHoraIso } from "@/lib/formato";
+import { paisDeTelefono } from "@/lib/telefono";
 import { traerPlanes } from "@/lib/planes";
 
-type Celda = string | number | null;
+/** `{ digitos }`: número largo que Excel debe dejar como texto (el celular). */
+type Celda = string | number | null | { digitos: string };
+
+/** Celular en el formato estándar, como texto para que Excel no lo vuelva 5,73E+11. */
+const celular = (t: string) => ({ digitos: t });
 
 /**
  * Descarga de reportes en CSV (se abre directo en Excel):
@@ -36,12 +41,15 @@ export async function GET(request: NextRequest) {
     const referentes = await traerResumenReferentes(supabase);
     nombre = `referentes-${fechaHoy}`;
     filas = [
-      ["Nombre", "Correo", "Teléfono", "Cuenta Dropi", "Código", "Link activo", "Referidos", "Activos en ATOM",
-        "Bono estimado", "Bono por pagar", "Bono pagado", "Fecha de registro"],
+      ["Nombre", "Correo", "País", "Celular", "Cuenta Dropi", "Código", "Link activo", "Suspendido", "Motivo suspensión",
+        "Referidos", "Activos en ATOM", "Bono estimado", "Bono en verificación", "Bono por pagar", "Bono pagado",
+        "Fecha de registro", "Versión términos", "Aceptó términos el", "Versión política", "Autorizó datos el"],
       ...referentes.map((f) => [
-        f.nombre, f.correo, f.telefono, f.cuenta_dropi, f.codigo, f.activo ? "Sí" : "No",
-        f.referidos, f.activos, f.totales.estimado, f.totales.por_pagar, f.totales.pagado,
-        formatoFechaHoraIso(f.created_at),
+        f.nombre, f.correo, f.telefono_pais ?? paisDeTelefono(f.telefono) ?? "", celular(f.telefono), f.cuenta_dropi, f.codigo, f.activo ? "Sí" : "No",
+        f.suspendido ? "Sí" : "No", f.motivo_suspension ?? "",
+        f.referidos, f.activos, f.totales.estimado, f.totales.en_verificacion, f.totales.por_pagar, f.totales.pagado,
+        formatoFechaHoraIso(f.created_at), f.version_terminos ?? "", formatoFechaHoraIso(f.terminos_aceptados_en),
+        f.version_politica ?? "", formatoFechaHoraIso(f.autorizado_en),
       ]),
     ];
   } else if (vista === "pagos") {
@@ -71,22 +79,28 @@ export async function GET(request: NextRequest) {
     filas = [
       [
         "Fecha de registro", "Referente", "Correo referente", "Código referente",
-        "Nombre referido", "Correo referido", "Teléfono", "Cuenta Dropi", "Tipo",
+        "Nombre referido", "Correo referido", "País", "Celular", "Cuenta Dropi", "Tipo",
         "Plan solicitado", "Activo en ATOM", "Cruce por", "Plan en la hoja", "Plan afiliado",
         "Bono", "Estado del bono", "Editado a mano", "Fecha de pago", "Último cruce",
         "Autorizó datos el", "Versión política",
+        "Confirmó por correo el", "Vence el", "Venció el", "Ya era cliente", "Fecha de activación",
+        "Origen fecha activación", "Bono fijado el", "Pasa a por pagar el",
       ],
       ...referidos.map((r) => [
         formatoFechaHoraIso(r.created_at),
         r.referente?.nombre ?? "", r.referente?.correo ?? "", r.referente?.codigo ?? "",
-        r.nombre ?? "", r.correo, r.telefono, r.cuenta_dropi, r.tipo,
+        r.nombre ?? "", r.correo, r.telefono_pais ?? paisDeTelefono(r.telefono) ?? "", celular(r.telefono), r.cuenta_dropi, r.tipo,
         nombrePlan(planes, r.plan_solicitado) ?? "",
         r.afiliado_atom === true ? "Sí" : r.afiliado_atom === false ? "No" : "Pendiente",
         r.cruce_por ?? "", r.plan_hoja ?? "", nombrePlan(planes, r.plan_afiliado_id) ?? "",
-        r.estado_bono === "no_aplica" || r.bono === null ? null : Number(r.bono),
+        SIN_BONO.includes(r.estado_bono) || r.bono === null ? null : Number(r.bono),
         tituloEstado(r.estado_bono), r.editado_manual ? "Sí" : "No",
         r.pago?.fecha_pago ?? "", formatoFechaHoraIso(r.cruce_actualizado_en),
         formatoFechaHoraIso(r.autorizado_en), r.version_politica,
+        formatoFechaHoraIso(r.confirmado_en), formatoFechaHoraIso(r.vence_en), formatoFechaHoraIso(r.vencido_en),
+        r.cliente_previo ? "Sí" : "No", formatoFechaHoraIso(r.fecha_activacion),
+        r.fecha_activacion_origen === "hoja" ? "Hoja" : r.fecha_activacion_origen === "cruce" ? "Detectada por el cruce" : "",
+        formatoFechaHoraIso(r.bono_fijado_en), formatoFechaHoraIso(r.por_pagar_desde ?? r.fecha_por_pagar),
       ]),
     ];
   }
@@ -104,7 +118,8 @@ export async function GET(request: NextRequest) {
 /**
  * Excel en español (Colombia) usa ";" para separar columnas y ","
  * para los decimales. Los textos que empiezan por = + - @ se protegen
- * para que Excel no los ejecute como fórmulas.
+ * para que Excel no los ejecute como fórmulas. Los celulares van como
+ * ="573104827756" para que Excel no los convierta en número.
  */
 function aCsv(filas: Celda[][]) {
   return filas
@@ -113,6 +128,8 @@ function aCsv(filas: Celda[][]) {
         .map((celda) => {
           if (celda === null || celda === undefined) return "";
           if (typeof celda === "number") return String(celda).replace(".", ",");
+          // ="573104827756": Excel lo muestra tal cual (solo dígitos, no es una fórmula peligrosa)
+          if (typeof celda === "object") return /^\d+$/.test(celda.digitos) ? `"=""${celda.digitos}"""` : celda.digitos;
           let t = celda;
           if (/^[=+\-@\t\r]/.test(t)) t = `'${t}`;
           return /[";\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;

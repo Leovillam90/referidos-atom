@@ -24,6 +24,13 @@ export function leerConfigHoja() {
       correo: requerida("SHEET_COL_CORREO"),
       telefono: requerida("SHEET_COL_TELEFONO"),
       plan: requerida("SHEET_COL_PLAN"),
+      // Estado del afiliado (ej. ESTADO MANUAL: ACTIVE / INACTIVE / CANCELED)
+      estado: requerida("SHEET_COL_ESTADO"),
+      // Opcional: fecha en que se activó. Si no está, se usa la fecha en que
+      // el cruce vio por primera vez el estado activo.
+      fechaActivacion: process.env.SHEET_COL_FECHA_ACTIVACION?.trim() || null,
     },
+    /** Valor de la columna de estado que significa "activo" (sin importar mayúsculas). */
+    valorActivo: (process.env.SHEET_VALOR_ACTIVO?.trim() || "ACTIVE").toLowerCase(),
   };
 }

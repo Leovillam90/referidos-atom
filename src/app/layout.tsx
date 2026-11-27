@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { urlSitio } from "@/lib/sitio";
 import "./globals.css";
 
 /*
@@ -19,10 +20,27 @@ const satoshi = localFont({
   display: "swap",
 });
 
+const TITULO = "Refiere a ATOM y gana bonos";
+const DESCRIPCION =
+  "Programa de referidos de ATOM Solutions Data: comparte tu link personal por WhatsApp y gana bonos por cada persona que se afilie a ATOM.";
+
+/*
+ * metadataBase vuelve absolutos los links de la imagen para compartir
+ * (src/app/opengraph-image.jpg, se genera con "npm run imagen-compartir").
+ */
 export const metadata: Metadata = {
+  metadataBase: new URL(urlSitio()),
   title: "Referidos ATOM",
-  description: "Programa de referidos de ATOM Solutions Data",
+  description: DESCRIPCION,
   applicationName: "Referidos ATOM",
+  openGraph: {
+    type: "website",
+    locale: "es_CO",
+    siteName: "Referidos ATOM",
+    title: TITULO,
+    description: DESCRIPCION,
+  },
+  twitter: { card: "summary_large_image", title: TITULO, description: DESCRIPCION },
   appleWebApp: { title: "Referidos ATOM", statusBarStyle: "black-translucent" },
 };
 

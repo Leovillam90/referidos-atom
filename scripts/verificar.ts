@@ -2,11 +2,15 @@
  * npm run verificar
  * Revisa la configuración de la app y muestra ✅ / ⚠️ / ❌ con qué hacer.
  * Nunca imprime el valor de una variable.
+ * Con "-- --produccion" exige además el dominio de producción en NEXT_PUBLIC_SITE_URL.
  */
 import { loadEnvConfig } from "@next/env";
 
 // Carga .env.local (y los demás .env) igual que Next.js
 loadEnvConfig(process.cwd(), true, { info: () => {}, error: console.error });
+
+// "npm run verificar -- --produccion": revisa como en producción (exige el dominio oficial)
+if (process.argv.includes("--produccion")) process.env.VERIFICAR_PRODUCCION = "1";
 
 const ICONO = { ok: "✅", aviso: "⚠️ ", error: "❌" } as const;
 

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Activo, EstadoBonoEtiqueta } from "@/components/estado-bono";
 import { obtenerPanelReferente, type ReferidoDelPanel } from "@/lib/sesion";
-import { nombrePlan, type PlanBasico } from "@/lib/estados";
+import { nombrePlan, SIN_BONO, type PlanBasico } from "@/lib/estados";
 import { formatoFecha, formatoPesos } from "@/lib/formato";
 import { urlSitio } from "@/lib/config-programa";
 import { cerrarSesion } from "./acciones";
@@ -80,9 +80,23 @@ async function ContenidoPanel() {
     );
   }
 
+  if (referente.suspendido) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Tu cuenta de referente está suspendida</CardTitle>
+          <CardDescription>
+            Mientras esté suspendida no puedes ver tu panel y tu link no recibe referidos nuevos. Si crees que es un
+            error, escríbenos.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   const link = `${urlSitio()}/r/${referente.codigo}`;
-  const total = (estado: ReferidoDelPanel["estado_bono"]) =>
-    referidos.filter((r) => r.estado_bono === estado).reduce((s, r) => s + (Number(r.bono) || 0), 0);
+  const total = (...estados: ReferidoDelPanel["estado_bono"][]) =>
+    referidos.filter((r) => estados.includes(r.estado_bono)).reduce((s, r) => s + (Number(r.bono) || 0), 0);
 
   return (
     <>
@@ -130,9 +144,18 @@ async function ContenidoPanel() {
         </div>
       </section>
 
-      <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
-        <Resumen titulo="Estimado" valor={formatoPesos(total("estimado"))} detalle="Referidos que aún no se activan" />
-        <Resumen titulo="Por pagar" valor={formatoPesos(total("por_pagar"))} detalle="Referidos activos en ATOM" />
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+        <Resumen
+          titulo="Estimado"
+          valor={formatoPesos(total("estimado", "pendiente_confirmacion"))}
+          detalle="Referidos que aún no se activan"
+        />
+        <Resumen
+          titulo="En verificación"
+          valor={formatoPesos(total("en_verificacion"))}
+          detalle="Activos, cumpliendo la permanencia"
+        />
+        <Resumen titulo="Por pagar" valor={formatoPesos(total("por_pagar"))} detalle="Listos para pagarte" />
         <Resumen titulo="Pagado" valor={formatoPesos(total("pagado"))} detalle="Bonos que ya recibiste" />
       </div>
 
@@ -142,7 +165,12 @@ async function ContenidoPanel() {
           <CardTitle>Mis referidos ({referidos.length})</CardTitle>
           <CardDescription>
             El bono es un pago único por referido. Mientras no se active es un estimado según el plan que
-            le interesa; al activarse en ATOM se calcula con el plan que tomó.
+            le interesa; al activarse en ATOM queda fijo con el plan que tomó. Cada registro tiene un plazo para
+            activarse: si vence, la persona queda libre. Ver los{" "}
+            <Link href="/terminos" className="text-primary underline-offset-4 hover:underline">
+              términos del programa
+            </Link>
+            .
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -191,10 +219,10 @@ function TablaReferidos({ referidos, planes }: { referidos: ReferidoDelPanel[]; 
               <Activo valor={r.afiliado_atom} />
             </TableCell>
             <TableCell data-label="Bono" className="text-right tabular-nums">
-              {r.estado_bono === "no_aplica" ? "—" : formatoPesos(r.bono)}
+              {SIN_BONO.includes(r.estado_bono) ? "—" : formatoPesos(r.bono)}
             </TableCell>
             <TableCell data-label="Estado">
-              <EstadoBonoEtiqueta estado={r.estado_bono} pago={r.pago} />
+              <EstadoBonoEtiqueta estado={r.estado_bono} pago={r.pago} plazo={r} paraReferente />
             </TableCell>
           </TableRow>
         ))}

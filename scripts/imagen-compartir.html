@@ -1,0 +1,63 @@
+<!doctype html>
+<!--
+  Plantilla de la imagen para compartir (Open Graph, 1200x630).
+  La convierte en src/app/opengraph-image.jpg el comando:
+    npm run imagen-compartir
+  Usa la fuente Satoshi y las imágenes de public/brand.
+-->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: Satoshi; src: url("../src/fonts/satoshi/Satoshi-Regular.woff2") format("woff2"); font-weight: 400; }
+  @font-face { font-family: Satoshi; src: url("../src/fonts/satoshi/Satoshi-Bold.woff2") format("woff2"); font-weight: 700; }
+  @font-face { font-family: Satoshi; src: url("../src/fonts/satoshi/Satoshi-Black.woff2") format("woff2"); font-weight: 900; }
+  * { margin: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    font-family: Satoshi, sans-serif;
+    color: #fff;
+    background:
+      radial-gradient(520px 420px at 88% 40%, rgba(13, 232, 192, 0.30), transparent 70%),
+      radial-gradient(460px 360px at 8% 110%, rgba(200, 31, 218, 0.30), transparent 70%),
+      radial-gradient(380px 300px at 55% -10%, rgba(104, 132, 197, 0.25), transparent 70%),
+      #1d2935;
+    position: relative;
+  }
+  .marco {
+    position: absolute; inset: 24px;
+    border-radius: 36px;
+    border: 2px solid rgba(255, 255, 255, 0.08);
+  }
+  .texto {
+    position: absolute; left: 80px; top: 84px; width: 640px;
+    display: flex; flex-direction: column; gap: 30px;
+  }
+  .logo { width: 300px; height: auto; }
+  .etiqueta {
+    font-weight: 700; font-size: 22px; letter-spacing: 0.2em; text-transform: uppercase; color: #0de8c0;
+  }
+  h1 { font-weight: 900; font-size: 78px; line-height: 1; letter-spacing: -0.02em; }
+  h1 span { color: #0de8c0; }
+  .dominio {
+    position: absolute; left: 80px; bottom: 70px;
+    font-weight: 700; font-size: 22px; color: #1d2935;
+    background: #0de8c0; padding: 12px 26px; border-radius: 999px;
+  }
+  .mascota {
+    position: absolute; right: 70px; bottom: 0; height: 560px; width: auto;
+    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.35));
+  }
+</style>
+</head>
+<body>
+  <div class="marco"></div>
+  <div class="texto">
+    <img class="logo" src="../public/brand/logo-horizontal-texto-blanco.png" alt="">
+    <div class="etiqueta">Programa de referidos</div>
+    <h1>Refiere a ATOM<br>y <span>gana bonos</span></h1>
+  </div>
+  <div class="dominio">referidos.atomsolutionsdata.com</div>
+  <img class="mascota" src="../public/brand/mascota.png" alt="">
+</body>
+</html>

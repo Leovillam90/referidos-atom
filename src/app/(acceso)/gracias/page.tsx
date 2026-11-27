@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { CircleCheck, MessageCircle, PlayCircle, UserPlus } from "lucide-react";
+import { CircleCheck, MailCheck, MessageCircle, PlayCircle, UserPlus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -30,11 +30,27 @@ export default function PaginaGracias({ searchParams }: PageProps<"/gracias">) {
       <CardContent>
         {/* El plan llega en la dirección, por eso va dentro de Suspense */}
         <Suspense fallback={<Pasos plan={null} />}>
-          {searchParams.then(async ({ plan }) => {
+          {searchParams.then(async ({ plan, confirmar }) => {
             const id = Array.isArray(plan) ? plan[0] : plan;
             // Solo el nombre del plan: el referido no ve el valor del bono
             const encontrado = id ? await buscarPlan(id).catch(() => null) : null;
-            return <Pasos plan={encontrado?.nombre ?? null} />;
+            return (
+              <>
+                {confirmar === "1" && (
+                  <div role="status" className="mb-4 flex gap-3 rounded-2xl border border-sea-green/40 bg-sea-green/10 p-4 text-sm">
+                    <MailCheck className="mt-0.5 size-5 shrink-0 text-sea-green" aria-hidden />
+                    <div className="grid gap-1">
+                      <p className="font-bold">Confirma tu registro</p>
+                      <p className="text-muted-foreground">
+                        Te enviamos un correo para que confirmes quién te invitó. Tu registro cuenta desde que lo
+                        confirmes. Revisa también la carpeta de spam.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <Pasos plan={encontrado?.nombre ?? null} />
+              </>
+            );
           })}
         </Suspense>
       </CardContent>

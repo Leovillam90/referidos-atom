@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Activo, EstadoBonoEtiqueta } from "@/components/estado-bono";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { ReferidoAdmin } from "@/lib/datos-admin";
-import { nombrePlan, type PlanBasico } from "@/lib/estados";
+import { nombrePlan, SIN_BONO, type PlanBasico } from "@/lib/estados";
 import { formatoFecha, formatoPesos } from "@/lib/formato";
 
 export function TablaReferidos({
@@ -32,7 +32,14 @@ export function TablaReferidos({
           <TableRow key={r.id}>
             <TableCell data-label="Referido">
               <Link href={`/admin/referidos/${r.id}`} className="grid hover:underline">
-                <span className="font-medium">{r.nombre ?? "—"}</span>
+                <span className="font-medium">
+                  {r.nombre ?? "—"}
+                  {r.es_referente && (
+                    <span className="ml-1 text-xs font-bold text-destructive" title="Sus datos coinciden con otro referente del programa">
+                      también es referente
+                    </span>
+                  )}
+                </span>
                 <span className="text-xs text-muted-foreground">
                   {r.correo} · {formatoFecha(r.created_at)}
                 </span>
@@ -41,7 +48,10 @@ export function TablaReferidos({
             {mostrarReferente && (
               <TableCell data-label="Referente">
                 <Link href={`/admin/referentes/${r.referente_id}`} className="grid hover:underline">
-                  <span>{r.referente?.nombre ?? "—"}</span>
+                  <span>
+                    {r.referente?.nombre ?? "—"}
+                    {r.referente?.suspendido && <span className="ml-1 text-xs font-bold text-destructive">suspendido</span>}
+                  </span>
                   <span className="font-mono text-xs text-muted-foreground">{r.referente?.codigo}</span>
                 </Link>
               </TableCell>
@@ -56,10 +66,10 @@ export function TablaReferidos({
               {r.editado_manual && <span className="ml-1 text-xs text-muted-foreground">(manual)</span>}
             </TableCell>
             <TableCell data-label="Bono" className="text-right tabular-nums">
-              {r.estado_bono === "no_aplica" ? "—" : formatoPesos(r.bono)}
+              {SIN_BONO.includes(r.estado_bono) ? "—" : formatoPesos(r.bono)}
             </TableCell>
             <TableCell data-label="Estado">
-              <EstadoBonoEtiqueta estado={r.estado_bono} pago={r.pago} />
+              <EstadoBonoEtiqueta estado={r.estado_bono} pago={r.pago} plazo={r} />
             </TableCell>
           </TableRow>
         ))}

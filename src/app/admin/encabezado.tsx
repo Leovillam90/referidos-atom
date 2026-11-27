@@ -11,6 +11,9 @@ export function EncabezadoAdmin({ children }: { children: React.ReactNode }) {
       etiqueta="Super admin"
       acciones={
         <>
+          <Link href="/admin/reglas" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            Reglas
+          </Link>
           <Link href="/admin/estado" prefetch={false} className={buttonVariants({ variant: "ghost", size: "sm" })}>
             Estado
           </Link>

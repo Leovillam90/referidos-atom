@@ -3,8 +3,11 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Campo } from "@/components/campo";
+import { CampoCelular } from "@/components/campo-celular";
 import { CampoTrampa } from "@/components/campo-trampa";
 import { CasillaAutorizacion } from "@/components/casilla-autorizacion";
+import { MensajeError } from "@/components/mensaje-formulario";
+import { Turnstile } from "@/components/turnstile";
 import { cn } from "@/lib/utils";
 import type { PlanBasico } from "@/lib/estados";
 import type { EstadoFormulario } from "../../acciones";
@@ -17,7 +20,15 @@ const TIPOS = [
   { valor: "marca", titulo: "Marca", detalle: "Tengo una marca propia" },
 ] as const;
 
-export function FormularioReferido({ codigo, planes }: { codigo: string; planes: PlanBasico[] }) {
+export function FormularioReferido({
+  codigo,
+  planes,
+  claveTurnstile,
+}: {
+  codigo: string;
+  planes: PlanBasico[];
+  claveTurnstile: string | null;
+}) {
   const [estado, accion, enviando] = useActionState(registrarReferido, inicial);
 
   const e = estado.errores ?? {};
@@ -29,17 +40,7 @@ export function FormularioReferido({ codigo, planes }: { codigo: string; planes:
 
       <Campo name="nombre" etiqueta="Nombre completo" autoComplete="name" defaultValue={v.nombre} error={e.nombre} required />
       <Campo name="correo" etiqueta="Correo" type="email" autoComplete="email" inputMode="email" defaultValue={v.correo} error={e.correo} required />
-      <Campo
-        name="telefono"
-        etiqueta="Teléfono"
-        type="tel"
-        autoComplete="tel"
-        inputMode="tel"
-        placeholder="300 123 4567"
-        defaultValue={v.telefono}
-        error={e.telefono}
-        required
-      />
+      <CampoCelular defaultValue={v.telefono} defaultPais={v.telefono_pais} error={e.telefono} reinicio={estado} />
       <Campo
         name="cuenta_dropi"
         etiqueta="Cuenta Dropi"
@@ -121,11 +122,9 @@ export function FormularioReferido({ codigo, planes }: { codigo: string; planes:
 
       <CampoTrampa />
 
-      {estado.mensaje && !estado.ok && (
-        <p role="alert" className="text-sm text-destructive">
-          {estado.mensaje}
-        </p>
-      )}
+      {claveTurnstile && <Turnstile claveSitio={claveTurnstile} reinicio={estado} />}
+
+      {!estado.ok && <MensajeError mensaje={estado.mensaje} enlace={estado.enlace} />}
 
       <Button type="submit" size="lg" disabled={enviando}>
         {enviando ? "Enviando…" : "Enviar mis datos"}

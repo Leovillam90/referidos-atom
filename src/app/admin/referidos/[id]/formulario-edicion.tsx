@@ -4,7 +4,8 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ESTADOS_BONO, type EstadoBono, type Plan } from "@/lib/estados";
+import { Motivo } from "@/components/campo-motivo";
+import { ESTADOS_BONO, ESTADOS_MANUALES, type EstadoBono, type Plan } from "@/lib/estados";
 import { formatoPesos } from "@/lib/formato";
 import { editarReferido, volverAUsarHoja, type EstadoEdicion } from "../../acciones";
 
@@ -20,8 +21,16 @@ type Props = {
     afiliado_atom: boolean | null;
     bono: number | null;
     estado_bono: EstadoBono;
+    vence_en: string | null;
   };
 };
+
+/** "2026-12-24T04:59:59Z" → "2026-12-23" (día en Colombia), para el campo de fecha. */
+function diaColombia(iso: string | null) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("sv-SE", { timeZone: "America/Bogota" });
+}
+
 
 export function FormularioEdicion({ id, planes, valores }: Props) {
   const [estado, accion, guardando] = useActionState(editarReferido, inicial);
@@ -87,15 +96,33 @@ export function FormularioEdicion({ id, planes, valores }: Props) {
         <div className="grid gap-1.5">
           <Label htmlFor="estado_bono">Estado del bono</Label>
           <select id="estado_bono" name="estado_bono" defaultValue={valores.estado_bono} className={selectClase}>
-            {ESTADOS_BONO.filter((s) => s.id !== "pagado").map((s) => (
+            {ESTADOS_BONO.filter((s) => (ESTADOS_MANUALES as readonly string[]).includes(s.id)).map((s) => (
               <option key={s.id} value={s.id}>
                 {s.titulo} — {s.detalle}
               </option>
             ))}
           </select>
-          <p className="text-xs text-muted-foreground">Para marcarlo como pagado, registra el pago desde la página del referente.</p>
+          <p className="text-xs text-muted-foreground">
+            Para marcarlo como pagado, registra el pago desde la página del referente. «Vencido» deja a la persona libre
+            para que otro referente la registre.
+          </p>
+        </div>
+
+        <div className="grid gap-1.5">
+          <Label htmlFor="vence_en">Vence el (opcional)</Label>
+          <Input
+            id="vence_en"
+            name="vence_en"
+            type="date"
+            defaultValue={diaColombia(valores.vence_en)}
+            aria-invalid={e.vence_en ? true : undefined}
+          />
+          <p className="text-xs text-muted-foreground">Para ampliar o acortar el plazo de este registro.</p>
+          {e.vence_en && <p className="text-xs text-destructive">{e.vence_en}</p>}
         </div>
       </div>
+
+      <Motivo error={e.motivo} ayuda="Ej. Se activó dentro del plazo, pero la hoja se actualizó tarde." />
 
       {estado.mensaje && (
         <p role={estado.ok ? "status" : "alert"} className={estado.ok ? "text-sm text-muted-foreground" : "text-sm text-destructive"}>
@@ -104,7 +131,7 @@ export function FormularioEdicion({ id, planes, valores }: Props) {
       )}
 
       <Button type="submit" disabled={guardando} className="justify-self-start">
-        {guardando ? "Guardando…" : "Guardar cambios"}
+        {guardando ? "Guardando…" : "Guardar excepción"}
       </Button>
     </form>
   );
@@ -115,8 +142,9 @@ export function BotonVolverAHoja({ id }: { id: string }) {
   return (
     <form action={accion} className="grid gap-2">
       <input type="hidden" name="id" value={id} />
+      <Motivo id="motivo-volver" error={estado.errores?.motivo} ayuda="Ej. La excepción ya no aplica." />
       <Button type="submit" variant="outline" disabled={enviando} className="justify-self-start">
-        {enviando ? "Actualizando…" : "Volver a usar la hoja"}
+        {enviando ? "Actualizando…" : "Volver a seguir las reglas"}
       </Button>
       {estado.mensaje && (
         <p role={estado.ok ? "status" : "alert"} className={estado.ok ? "text-sm text-muted-foreground" : "text-sm text-destructive"}>

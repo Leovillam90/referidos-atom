@@ -7,10 +7,14 @@ export type ReferentePublico = {
   id: string;
   nombre: string;
   correo: string;
+  // Identificadores (correo, teléfono, cuenta Dropi, también los anteriores),
+  // para la regla de no auto-referirse
+  identificadores: string[] | null;
 };
 
 /**
- * Busca un referente ACTIVO por su código del link /r/CODIGO.
+ * Busca por su código del link /r/CODIGO un referente con el link activo
+ * y NO suspendido.
  * Usa la clave secreta (los visitantes no tienen acceso a la tabla),
  * por eso solo debe devolverse al navegador el primer nombre.
  */
@@ -24,9 +28,10 @@ export async function buscarReferentePorCodigo(codigo: string): Promise<Referent
 
   const { data, error } = await crearClienteAdmin()
     .from("referentes")
-    .select("id, nombre, correo")
+    .select("id, nombre, correo, identificadores")
     .eq("codigo", valido.data)
     .eq("activo", true)
+    .eq("suspendido", false)
     .maybeSingle<ReferentePublico>();
 
   if (error) {

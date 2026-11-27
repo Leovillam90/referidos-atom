@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buscarReferentePorCodigo, primerNombre } from "@/lib/referentes-publico";
 import { planesParaFormulario } from "@/lib/planes";
+import { claveSitioTurnstile } from "@/lib/turnstile";
 import { FormularioReferido } from "./formulario-referido";
 import { ConMascota } from "@/components/marco-acceso";
 
@@ -46,9 +47,9 @@ async function Contenido({ codigo }: { codigo: string }) {
   if (!referente) {
     return (
       <CardHeader>
-        <CardTitle className="text-2xl font-black">Link no válido</CardTitle>
+        <CardTitle className="text-2xl font-black">Este link no está disponible</CardTitle>
         <CardDescription>
-          Este link de referido no existe o fue desactivado. Pídele a quien te lo envió que lo revise.
+          Pídele a quien te lo envió que lo revise, o escríbenos si tienes dudas.
         </CardDescription>
       </CardHeader>
     );
@@ -64,7 +65,7 @@ async function Contenido({ codigo }: { codigo: string }) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <FormularioReferido codigo={codigo.toUpperCase()} planes={planes} />
+        <FormularioReferido codigo={codigo.toUpperCase()} planes={planes} claveTurnstile={claveSitioTurnstile()} />
       </CardContent>
     </>
   );

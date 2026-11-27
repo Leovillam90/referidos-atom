@@ -22,7 +22,7 @@ sin contraseña. Tienen el mismo diseño que los correos de la app
 
 - El botón usa `{{ .SiteURL }}`: la **Site URL** de Supabase
   (Authentication → URL Configuration) debe ser la dirección pública,
-  hoy `https://referidos-atom.vercel.app`.
+  hoy `https://referidos.atomsolutionsdata.com`.
 - El logo se carga desde `{{ .SiteURL }}/brand/logo-horizontal-texto-blanco.png`,
   así que solo se ve cuando la app está publicada (no en `localhost`).
 - No cambies lo que está entre `{{ }}`: Supabase lo reemplaza al enviar.
