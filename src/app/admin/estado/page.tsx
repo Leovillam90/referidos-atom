@@ -16,7 +16,7 @@ export default function PaginaEstado() {
     <EncabezadoAdmin>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Estado de la configuración</h1>
+          <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Estado de la configuración</h1>
           <p className="text-sm text-muted-foreground">
             Revisa variables, base de datos, Google Sheet, correo y enlaces. Nunca se muestra el valor de una clave.
             También puedes correrlo en la terminal con <code className="font-mono">npm run verificar</code>.
@@ -39,7 +39,7 @@ function Cargando() {
     <div className="grid gap-4" aria-busy="true" aria-label="Revisando la configuración">
       <p className="text-sm text-muted-foreground">Revisando… (puede tardar unos segundos)</p>
       {[0, 1, 2].map((i) => (
-        <div key={i} className="h-40 animate-pulse rounded-xl bg-muted" />
+        <div key={i} className="h-40 animate-pulse rounded-3xl bg-muted" />
       ))}
     </div>
   );
@@ -66,7 +66,7 @@ async function Resultados() {
       {grupos.map((g) => (
         <Card key={g.titulo}>
           <CardHeader>
-            <CardTitle className="text-base">{g.titulo}</CardTitle>
+            <CardTitle>{g.titulo}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="grid gap-3">

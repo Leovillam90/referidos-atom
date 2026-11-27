@@ -41,7 +41,7 @@ export function CopiarLink({ url }: { url: string }) {
   return (
     <div className="grid gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded-md border bg-muted px-3 py-2 text-sm select-all">
+        <code className="min-w-0 flex-1 truncate rounded-full border bg-dark-gunmetal/60 px-4 py-2.5 text-sm text-sea-green select-all">
           {url}
         </code>
         <Button type="button" variant="outline" size="lg" onClick={copiar}>

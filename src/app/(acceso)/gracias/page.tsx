@@ -21,8 +21,8 @@ export default function PaginaGracias({ searchParams }: PageProps<"/gracias">) {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CircleCheck className="size-8 text-primary" aria-hidden />
-        <CardTitle className="text-xl">¡Gracias por registrarte!</CardTitle>
+        <CircleCheck className="size-9 text-sea-green" aria-hidden />
+        <CardTitle className="text-2xl font-black">¡Gracias por registrarte!</CardTitle>
         <CardDescription>Sigue estos 3 pasos para activarte en ATOM.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -96,12 +96,12 @@ function Paso({
   children: React.ReactNode;
 }) {
   return (
-    <li className="grid gap-3 rounded-lg border p-4">
+    <li className="grid gap-3 rounded-2xl border bg-dark-gunmetal/40 p-4">
       <div className="flex items-center gap-3">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sea-green text-sm font-black text-dark-gunmetal">
           {numero}
         </span>
-        <span className="flex items-center gap-2 font-medium [&_svg]:size-4 [&_svg]:text-muted-foreground">
+        <span className="flex items-center gap-2 font-bold [&_svg]:size-4 [&_svg]:text-sea-green">
           {icono}
           {titulo}
         </span>

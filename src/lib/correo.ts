@@ -46,17 +46,36 @@ function escapar(t: string) {
   return t.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
+/*
+ * Diseño de marca ATOM para correos (mismo diseño que las plantillas de
+ * Supabase en /emails). Tablas y estilos en línea para que se vea bien en
+ * Gmail, Outlook y el celular. Tipografía segura: Helvetica/Arial.
+ * Contrastes: texto #1D2935 sobre blanco 14.8:1 · botón #1D2935 sobre
+ * #0DE8C0 9.4:1 · pie #5B6675 sobre #EEF1F5 5.2:1.
+ */
+const FUENTE = "'Helvetica Neue',Helvetica,Arial,sans-serif";
+
 function plantilla(titulo: string, parrafos: string[], boton: { texto: string; url: string }) {
-  return `<!doctype html><html lang="es"><body style="margin:0;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#18181b">
-<div style="max-width:520px;margin:0 auto;padding:24px">
-  <div style="background:#ffffff;border-radius:12px;padding:24px">
-    <p style="margin:0 0 16px;font-weight:bold">Referidos ATOM</p>
-    <h1 style="margin:0 0 16px;font-size:20px">${titulo}</h1>
-    ${parrafos.map((p) => `<p style="margin:0 0 12px;line-height:1.5">${p}</p>`).join("")}
-    <p style="margin:24px 0 0"><a href="${boton.url}" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:8px">${boton.texto}</a></p>
-  </div>
-  <p style="font-size:12px;color:#71717a;margin:16px 0 0">Recibes este correo porque participas en el programa de referidos de ATOM.</p>
-</div></body></html>`;
+  const logo = `${urlSitio()}/brand/logo-horizontal-texto-blanco.png`;
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${titulo}</title></head>
+<body style="margin:0;padding:0;background:#eef1f5;font-family:${FUENTE};color:#1d2935">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eef1f5"><tr><td align="center" style="padding:24px 12px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#ffffff;border-radius:24px;overflow:hidden">
+    <tr><td align="center" style="background:#1d2935;padding:28px 24px">
+      <img src="${logo}" width="180" alt="ATOM Solutions Data" style="display:block;width:180px;max-width:100%;height:auto;border:0">
+    </td></tr>
+    <tr><td style="height:4px;line-height:4px;font-size:0;background:#6884c5;background-image:linear-gradient(90deg,#c81fda,#6884c5,#0de8c0)">&nbsp;</td></tr>
+    <tr><td style="padding:32px 28px 8px">
+      <h1 style="margin:0 0 16px;font-family:${FUENTE};font-size:24px;line-height:1.25;font-weight:900;color:#1d2935">${titulo}</h1>
+      ${parrafos.map((p) => `<p style="margin:0 0 14px;font-size:16px;line-height:1.55;color:#1d2935">${p}</p>`).join("")}
+    </td></tr>
+    <tr><td style="padding:12px 28px 36px">
+      <a href="${boton.url}" style="display:inline-block;background:#0de8c0;color:#1d2935;font-family:${FUENTE};font-size:16px;font-weight:700;text-decoration:none;padding:14px 28px;border-radius:999px">${boton.texto}</a>
+    </td></tr>
+  </table>
+  <p style="max-width:560px;margin:16px auto 0;font-size:12px;line-height:1.5;color:#5b6675">Recibes este correo porque participas en el programa de referidos de ATOM Solutions Data.<br>Confianza · Seguridad · Calidad · Rapidez · Acompañamiento</p>
+</td></tr></table>
+</body></html>`;
 }
 
 const primerNombre = (n: string) => n.trim().split(/\s+/)[0] ?? "";

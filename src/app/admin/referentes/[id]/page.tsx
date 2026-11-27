@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TarjetaResumen } from "@/components/tarjeta-resumen";
 import Link from "next/link";
 import { Suspense } from "react";
 import { z } from "zod";
@@ -30,7 +31,7 @@ export const metadata: Metadata = { title: "Referente · Administración · Refe
 export default function PaginaReferente({ params }: PageProps<"/admin/referentes/[id]">) {
   return (
     <EncabezadoAdmin>
-      <Suspense fallback={<div className="h-96 animate-pulse rounded-xl bg-muted" aria-busy="true" />}>
+      <Suspense fallback={<div className="h-96 animate-pulse rounded-3xl bg-muted" aria-busy="true" />}>
         {params.then(({ id }) => (
           <Contenido id={id} />
         ))}
@@ -72,7 +73,7 @@ async function Contenido({ id }: { id: string }) {
         <Link href="/admin?vista=referentes" className="text-sm text-muted-foreground hover:underline">
           ← Todos los referentes
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">{referente.nombre}</h1>
+        <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{referente.nombre}</h1>
         <p className="text-sm text-muted-foreground">
           {referente.correo} · {formatoTelefono(referente.telefono)} · Dropi: {referente.cuenta_dropi} · Código{" "}
           <span className="font-mono">{referente.codigo}</span>
@@ -174,12 +175,5 @@ function NoEncontrado() {
 }
 
 function Resumen({ titulo, valor }: { titulo: string; valor: string }) {
-  return (
-    <Card size="sm">
-      <CardHeader>
-        <CardDescription>{titulo}</CardDescription>
-        <CardTitle className="text-2xl tabular-nums">{valor}</CardTitle>
-      </CardHeader>
-    </Card>
-  );
+  return <TarjetaResumen titulo={titulo} valor={valor} />;
 }

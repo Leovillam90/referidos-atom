@@ -49,14 +49,14 @@ export function FormularioReferido({ codigo, planes }: { codigo: string; planes:
       />
 
       <fieldset className="grid gap-2" aria-describedby={e.tipo ? "tipo-error" : undefined}>
-        <legend className="mb-1.5 text-sm font-medium">¿Qué eres?</legend>
+        <legend className="mb-1.5 text-sm font-bold">¿Qué eres?</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {TIPOS.map((t) => (
             <label
               key={t.valor}
               className={cn(
-                "flex cursor-pointer gap-3 rounded-lg border p-3 text-sm transition-colors",
-                "has-checked:border-primary has-checked:bg-primary/5 has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
+                "flex cursor-pointer gap-3 rounded-2xl border bg-dark-gunmetal/40 p-3.5 text-sm transition-colors",
+                "has-checked:border-sea-green has-checked:bg-sea-green/10 has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
                 e.tipo && "border-destructive",
               )}
             >
@@ -69,7 +69,7 @@ export function FormularioReferido({ codigo, planes }: { codigo: string; planes:
                 required
               />
               <span className="grid gap-0.5">
-                <span className="font-medium">{t.titulo}</span>
+                <span className="font-bold">{t.titulo}</span>
                 <span className="text-xs text-muted-foreground">{t.detalle}</span>
               </span>
             </label>
@@ -83,14 +83,14 @@ export function FormularioReferido({ codigo, planes }: { codigo: string; planes:
       </fieldset>
 
       <fieldset className="grid gap-2" aria-describedby={e.plan_solicitado ? "plan-error" : undefined}>
-        <legend className="mb-1.5 text-sm font-medium">¿Qué plan te interesa?</legend>
+        <legend className="mb-1.5 text-sm font-bold">¿Qué plan te interesa?</legend>
         <div className="grid gap-2">
           {planes.map((p) => (
             <label
               key={p.id}
               className={cn(
-                "flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm transition-colors",
-                "has-checked:border-primary has-checked:bg-primary/5 has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
+                "flex cursor-pointer items-center gap-3 rounded-2xl border bg-dark-gunmetal/40 p-3.5 text-sm transition-colors",
+                "has-checked:border-sea-green has-checked:bg-sea-green/10 has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
                 e.plan_solicitado && "border-destructive",
               )}
             >
@@ -102,7 +102,7 @@ export function FormularioReferido({ codigo, planes }: { codigo: string; planes:
                 className="accent-primary"
                 required
               />
-              <span className="font-medium">{p.nombre}</span>
+              <span className="font-bold">{p.nombre}</span>
             </label>
           ))}
         </div>

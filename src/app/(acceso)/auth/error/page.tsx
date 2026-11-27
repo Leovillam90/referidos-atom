@@ -6,7 +6,7 @@ export default function ErrorDeLink() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-xl">El link no funcionó</CardTitle>
+        <CardTitle className="text-2xl font-black">El link no funcionó</CardTitle>
         <CardDescription>
           Puede que ya lo hayas usado o que haya pasado más de una hora. Pide uno nuevo
           y ábrelo apenas te llegue.

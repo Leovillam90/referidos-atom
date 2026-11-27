@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TarjetaResumen } from "@/components/tarjeta-resumen";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,38 +19,37 @@ import { formatoFecha, formatoPesos } from "@/lib/formato";
 import { urlSitio } from "@/lib/config-programa";
 import { cerrarSesion } from "./acciones";
 import { CopiarLink } from "./copiar-link";
+import { MarcoApp } from "@/components/marco-app";
 
 export const metadata: Metadata = { title: "Mi panel · Referidos ATOM" };
 
 export default function PaginaPanel() {
   return (
-    <div className="flex flex-1 flex-col bg-muted/40">
-      <header className="border-b bg-background">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <span className="font-semibold tracking-tight">Referidos ATOM</span>
-          <form action={cerrarSesion}>
-            <Button type="submit" variant="ghost">
-              Cerrar sesión
-            </Button>
-          </form>
-        </div>
-      </header>
-      <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8">
-        {/* La sesión se lee en el momento de la visita, por eso va dentro de Suspense */}
-        <Suspense fallback={<CargandoPanel />}>
-          <ContenidoPanel />
-        </Suspense>
-      </main>
-    </div>
+    <MarcoApp
+      inicio="/panel"
+      etiqueta="Referidos"
+      acciones={
+        <form action={cerrarSesion}>
+          <Button type="submit" variant="ghost" size="sm">
+            Cerrar sesión
+          </Button>
+        </form>
+      }
+    >
+      {/* La sesión se lee en el momento de la visita, por eso va dentro de Suspense */}
+      <Suspense fallback={<CargandoPanel />}>
+        <ContenidoPanel />
+      </Suspense>
+    </MarcoApp>
   );
 }
 
 function CargandoPanel() {
   return (
     <div className="grid gap-6" aria-busy="true" aria-label="Cargando tu panel">
-      <div className="h-8 w-64 animate-pulse rounded-md bg-muted" />
-      <div className="h-32 animate-pulse rounded-xl bg-muted" />
-      <div className="h-64 animate-pulse rounded-xl bg-muted" />
+      <div className="h-8 w-64 animate-pulse rounded-full bg-muted" />
+      <div className="h-32 animate-pulse rounded-3xl bg-muted" />
+      <div className="h-64 animate-pulse rounded-3xl bg-muted" />
     </div>
   );
 }
@@ -87,7 +87,7 @@ async function ContenidoPanel() {
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Hola, {referente.nombre.split(" ")[0]}</h1>
+          <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Hola, {referente.nombre.split(" ")[0]}</h1>
           <p className="text-sm text-muted-foreground">Aquí ves a las personas que se registraron con tu link y tus bonos.</p>
         </div>
         {esSuperAdmin && (
@@ -142,15 +142,7 @@ async function ContenidoPanel() {
 }
 
 function Resumen({ titulo, valor, detalle }: { titulo: string; valor: string; detalle: string }) {
-  return (
-    <Card size="sm">
-      <CardHeader>
-        <CardDescription>{titulo}</CardDescription>
-        <CardTitle className="text-2xl tabular-nums">{valor}</CardTitle>
-        <p className="text-xs text-muted-foreground">{detalle}</p>
-      </CardHeader>
-    </Card>
-  );
+  return <TarjetaResumen titulo={titulo} valor={valor} detalle={detalle} />;
 }
 
 function TablaReferidos({ referidos, planes }: { referidos: ReferidoDelPanel[]; planes: PlanBasico[] }) {

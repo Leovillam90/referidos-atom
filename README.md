@@ -281,6 +281,23 @@ Muestran una lista con ✅ (bien), ⚠️ (aviso) o ❌ (por corregir) y **qué 
 
 ---
 
+## Identidad de marca (ATOM Solutions Data)
+
+- **Colores** (clases de Tailwind en `src/app/globals.css`): `dark-gunmetal` #1D2935 (fondo),
+  `sea-green` #0DE8C0 (acento y botón principal), `silver-lake-blue` #6884C5 (botón secundario),
+  `steel-pink` #C81FDA. Degradado de marca: `linea-degradado` y `subrayado-degradado`.
+- **Estados del bono:** Estimado (azul), Por pagar (rosa), Pagado ✓ (verde), No aplica (gris).
+  Los contrastes están revisados para WCAG AA (comentarios en `globals.css` y `components/ui/badge.tsx`).
+  Nunca pongas texto blanco sobre el verde: no se lee.
+- **Tipografía:** Satoshi, autoalojada en `src/fonts/satoshi/`. Su licencia (`LICENCIA-FFL.txt`)
+  **no permite publicar los archivos de la fuente**: este repositorio debe seguir siendo **privado**.
+- **Logos:** `public/brand/` (copiados del manual de marca, sin deformar). Favicon e íconos del
+  celular: `src/app/favicon.ico`, `icon.png`, `apple-icon.png` y `public/brand/icono-*.png`.
+- **Correos:** los de la app están en `src/lib/correo.ts`; las plantillas para Supabase Auth
+  (Magic link y Confirm signup) están en `emails/` con instrucciones para pegarlas.
+
+---
+
 ## Seguridad: resumen
 
 - **Row Level Security** activado en todas las tablas: un referente solo ve su perfil, sus referidos y sus pagos; el super_admin ve todo.

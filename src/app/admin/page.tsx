@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TarjetaResumen } from "@/components/tarjeta-resumen";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Download } from "lucide-react";
@@ -60,10 +61,10 @@ function Cargando() {
     <div className="grid gap-6" aria-busy="true" aria-label="Cargando">
       <div className="grid gap-4 sm:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
+          <div key={i} className="h-24 animate-pulse rounded-3xl bg-muted" />
         ))}
       </div>
-      <div className="h-96 animate-pulse rounded-xl bg-muted" />
+      <div className="h-96 animate-pulse rounded-3xl bg-muted" />
     </div>
   );
 }
@@ -134,7 +135,7 @@ async function Contenido({ vista, filtro }: { vista: Vista; filtro: FiltroReferi
                   href={`/admin?vista=referidos&estado=${f.id}`}
                   aria-current={filtro === f.id ? "true" : undefined}
                   className={cn(
-                    "rounded-full border px-3 py-1 text-xs transition-colors",
+                    "rounded-full border px-3.5 py-1.5 text-xs font-bold transition-colors",
                     filtro === f.id ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted",
                   )}
                 >
@@ -190,15 +191,7 @@ function Pestana({ href, activa, children }: { href: string; activa: boolean; ch
 }
 
 function Resumen({ titulo, valor, detalle }: { titulo: string; valor: string; detalle?: string }) {
-  return (
-    <Card size="sm">
-      <CardHeader>
-        <CardDescription>{titulo}</CardDescription>
-        <CardTitle className="text-2xl tabular-nums">{valor}</CardTitle>
-        {detalle && <p className="text-xs text-muted-foreground">{detalle}</p>}
-      </CardHeader>
-    </Card>
-  );
+  return <TarjetaResumen titulo={titulo} valor={valor} detalle={detalle} />;
 }
 
 function TablaReferentes({ referentes }: { referentes: ResumenReferente[] }) {

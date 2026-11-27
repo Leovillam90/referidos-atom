@@ -27,9 +27,9 @@ export default function PaginaReferido({ params }: PageProps<"/r/[codigo]">) {
 function Cargando() {
   return (
     <CardContent className="grid gap-4 py-2" aria-busy="true" aria-label="Cargando">
-      <div className="h-6 w-48 animate-pulse rounded-md bg-muted" />
-      <div className="h-4 w-full animate-pulse rounded-md bg-muted" />
-      <div className="h-64 animate-pulse rounded-lg bg-muted" />
+      <div className="h-6 w-48 animate-pulse rounded-full bg-muted" />
+      <div className="h-4 w-full animate-pulse rounded-full bg-muted" />
+      <div className="h-64 animate-pulse rounded-2xl bg-muted" />
     </CardContent>
   );
 }
@@ -43,7 +43,7 @@ async function Contenido({ codigo }: { codigo: string }) {
   if (!referente) {
     return (
       <CardHeader>
-        <CardTitle className="text-xl">Link no válido</CardTitle>
+        <CardTitle className="text-2xl font-black">Link no válido</CardTitle>
         <CardDescription>
           Este link de referido no existe o fue desactivado. Pídele a quien te lo envió que lo revise.
         </CardDescription>
@@ -54,7 +54,7 @@ async function Contenido({ codigo }: { codigo: string }) {
   return (
     <>
       <CardHeader>
-        <CardTitle className="text-xl">Únete a ATOM</CardTitle>
+        <CardTitle className="text-2xl font-black">Únete a ATOM</CardTitle>
         <CardDescription>
           {primerNombre(referente.nombre)} te invitó a ATOM. Déjanos tus datos y nuestro equipo te
           contactará. No necesitas crear una cuenta.

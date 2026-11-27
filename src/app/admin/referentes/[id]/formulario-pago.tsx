@@ -107,7 +107,7 @@ export function FormularioPago({ referenteId, porPagar, hoy }: { referenteId: st
       <fieldset className="grid gap-2">
         <legend className="mb-1.5 text-sm font-medium">Referidos que cubre este pago</legend>
         {porPagar.map((r) => (
-          <label key={r.id} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-sm has-checked:border-primary has-checked:bg-primary/5">
+          <label key={r.id} className="flex cursor-pointer items-center gap-3 rounded-2xl border bg-dark-gunmetal/40 p-3.5 text-sm has-checked:border-sea-green has-checked:bg-sea-green/10">
             <input type="checkbox" checked={seleccion.has(r.id)} onChange={() => alternar(r.id)} className="size-4 accent-primary" />
             <span className="grid flex-1">
               <span className="font-medium">{r.nombre}</span>

@@ -9,7 +9,7 @@ export default function PaginaIngreso() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-xl">Entra a tu panel</CardTitle>
+        <CardTitle className="text-2xl font-black">Entra a tu panel</CardTitle>
         <CardDescription>Escribe tu correo y te enviaremos un link para entrar.</CardDescription>
       </CardHeader>
       <CardContent>

@@ -9,7 +9,7 @@ export default function PaginaRegistro() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-xl">Regístrate como referente</CardTitle>
+        <CardTitle className="text-2xl font-black">Regístrate como referente</CardTitle>
         <CardDescription>
           Recibirás un link personal para invitar proveedores y marcas a ATOM.
           No necesitas contraseña: te enviaremos un link de acceso a tu correo.

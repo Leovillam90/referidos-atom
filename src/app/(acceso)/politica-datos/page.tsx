@@ -21,10 +21,10 @@ export default function PaginaPolitica() {
   return (
     <Card className="w-full max-w-2xl">
       <CardHeader>
-        <CardTitle className="text-xl">Política de tratamiento de datos personales</CardTitle>
+        <CardTitle className="text-2xl font-black">Política de tratamiento de datos personales</CardTitle>
         <CardDescription>Programa de referidos ATOM · Versión {version}</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4 text-sm leading-relaxed text-muted-foreground [&_h2]:font-medium [&_h2]:text-foreground">
+      <CardContent className="grid gap-4 text-sm leading-relaxed text-muted-foreground [&_h2]:font-bold [&_h2]:text-foreground">
         <section className="grid gap-1">
           <h2>1. Responsable</h2>
           <p>

@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Referido · Administración · Refer
 export default function PaginaReferido({ params }: PageProps<"/admin/referidos/[id]">) {
   return (
     <EncabezadoAdmin>
-      <Suspense fallback={<div className="h-96 animate-pulse rounded-xl bg-muted" aria-busy="true" />}>
+      <Suspense fallback={<div className="h-96 animate-pulse rounded-3xl bg-muted" aria-busy="true" />}>
         {params.then(({ id }) => (
           <Contenido id={id} />
         ))}
@@ -42,7 +42,7 @@ async function Contenido({ id }: { id: string }) {
         <Link href={`/admin/referentes/${r.referente_id}`} className="text-sm text-muted-foreground hover:underline">
           ← Referidos de {r.referente?.nombre ?? "este referente"}
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">{r.nombre ?? r.correo}</h1>
+        <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{r.nombre ?? r.correo}</h1>
         <p className="text-sm text-muted-foreground">
           {r.correo} · {formatoTelefono(r.telefono)} · Dropi: {r.cuenta_dropi} · <span className="capitalize">{r.tipo}</span> ·
           registrado el {formatoFecha(r.created_at)}
@@ -161,7 +161,7 @@ function valorLegible(campo: string, v: unknown, planes: Plan[]) {
 
 function EntradaHistorial({ h, planes }: { h: HistorialItem; planes: Plan[] }) {
   return (
-    <li className="grid gap-1 rounded-lg border p-3 text-sm">
+    <li className="grid gap-1 rounded-2xl border bg-dark-gunmetal/40 p-3.5 text-sm">
       <div className="flex flex-wrap justify-between gap-2">
         <span className="font-medium">{h.accion}</span>
         <span className="text-xs text-muted-foreground">

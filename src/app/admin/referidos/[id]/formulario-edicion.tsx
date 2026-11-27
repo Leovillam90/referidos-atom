@@ -10,7 +10,7 @@ import { editarReferido, volverAUsarHoja, type EstadoEdicion } from "../../accio
 
 const inicial: EstadoEdicion = { ok: false };
 const selectClase =
-  "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+  "h-11 w-full rounded-xl border border-input bg-dark-gunmetal/60 px-3.5 text-base md:text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 type Props = {
   id: string;
