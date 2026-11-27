@@ -285,8 +285,8 @@
 @media (max-width: 767px) {
   /* Celular: la mascota se mueve igual que en PC (solo transform/opacity,
      baratos para la GPU). Solo se apaga el fondo grande en movimiento. */
-  .anim-fondo-a, .anim-fondo-b { animation: none; }
-  .anim-particula { animation-duration: 9s; }
+  .anim-fondo-a, .anim-fondo-b, .anim-particula { animation: none; }
+  .anim-particula { opacity: 0.35; }
 }
 
 /* Tablas → tarjetas en el celular. Cada celda muestra su título con data-label. */
