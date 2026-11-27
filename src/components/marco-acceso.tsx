@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FondoDigital } from "@/components/fondo-digital";
 import { Logo, PieMarca } from "@/components/marca";
+import type { Expresion } from "@/components/cara-mascota";
 import { Mascota } from "@/components/mascota";
 import { cn } from "@/lib/utils";
 
@@ -42,11 +43,15 @@ export function ConMascota({
   movimiento = "flotar",
   enMovil = true,
   prioridad = false,
+  expresion,
+  celebrar,
 }: {
   children: React.ReactNode;
   movimiento?: "flotar" | "saltar" | "quieta";
   enMovil?: boolean;
   prioridad?: boolean;
+  expresion?: Expresion;
+  celebrar?: boolean;
 }) {
   return (
     <div className="grid w-full max-w-6xl items-center justify-items-center gap-4 lg:grid-cols-[minmax(0,36rem)_minmax(0,1fr)] lg:gap-14">
@@ -56,6 +61,8 @@ export function ConMascota({
           movimiento={movimiento}
           parallax
           prioridad={prioridad}
+          expresion={expresion}
+          celebrar={celebrar}
         />
       </div>
       <div className="flex w-full justify-center">{children}</div>

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { CaraMascota, Destellos, type Expresion } from "@/components/cara-mascota";
 import { ParallaxMouse } from "@/components/parallax-mouse";
 import { cn } from "@/lib/utils";
 
@@ -9,7 +10,8 @@ import { cn } from "@/lib/utils";
  *
  * Capas (cada una con su propia animación, para que no choquen):
  *   halo (respira) · parallax (mouse, solo PC) · entrada (rebote) ·
- *   flotación o salto · saludo (al pasar por el botón principal)
+ *   flotación o salto · saludo (al pasar por el botón principal) · cara
+ *   (ojos y boca en SVG sobre el visor: parpadeo, mirada y expresiones)
  */
 export const MASCOTA = { src: "/brand/mascota.webp", ancho: 965, alto: 1200 } as const;
 
@@ -22,6 +24,8 @@ export function Mascota({
   halo = true,
   haloEnMovil = true,
   alt = "Mascota de ATOM",
+  expresion = "normal",
+  celebrar = false,
 }: {
   /** Ancho de la mascota (ej. "w-64 lg:w-[30rem]"). */
   className?: string;
@@ -34,12 +38,16 @@ export function Mascota({
   /** false: el halo solo se ve en PC (si el contenedor recorta la mascota en el celular). */
   haloEnMovil?: boolean;
   alt?: string;
+  /** Expresión de la cara (ej. "feliz" en /gracias, "triste" en errores). */
+  expresion?: Expresion;
+  /** Celebración: destellos alrededor y brillo más intenso en los ojos. */
+  celebrar?: boolean;
 }) {
   const imagen = (
     <div className="anim-entrada">
       <div className={cn(movimiento === "flotar" && "anim-flotar", movimiento === "saltar" && "anim-salto")}>
         <div className={cn(movimiento !== "quieta" && "anim-vida")}>
-          <div className="anim-saludo">
+          <div className="anim-saludo relative">
             <Image
               src={MASCOTA.src}
               width={MASCOTA.ancho}
@@ -48,9 +56,11 @@ export function Mascota({
               alt={alt}
               priority={prioridad}
               fetchPriority={prioridad ? "high" : undefined}
-              className="h-auto w-full select-none"
+              className="block h-auto w-full select-none"
               draggable={false}
             />
+            <CaraMascota expresion={expresion} celebrar={celebrar} />
+            {celebrar && <Destellos />}
           </div>
         </div>
       </div>

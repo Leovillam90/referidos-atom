@@ -5,7 +5,7 @@ import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/comp
 
 export default function ErrorDeLink() {
   return (
-    <ConMascota>
+    <ConMascota expresion="triste">
     <Card className="w-full max-w-md">
       <CardHeader>
         <CardTitle className="text-2xl font-black">El link no funcionó</CardTitle>

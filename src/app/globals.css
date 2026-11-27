@@ -253,11 +253,83 @@
 .anim-salto { animation: mascota-salto 2.6s ease-in-out 1.2s infinite; }
 .anim-saludo { transform-origin: 50% 85%; }
 
-/* Saludo: al pasar el mouse (o enfocar con teclado) el botón principal */
-.zona-saludo:has(.dispara-saludo:hover, .dispara-saludo:focus-visible) .anim-saludo,
+/* Saludo: al pasar el mouse (o tocar) la propia mascota */
 .mascota:hover .anim-saludo,
 .mascota:active .anim-saludo {
   animation: mascota-saludo 0.9s ease-in-out;
+}
+/* Brinco: al pasar el mouse (o enfocar con teclado) "Quiero ser referente" */
+.zona-saludo:has(.dispara-saludo:hover, .dispara-saludo:focus-visible) .anim-saludo {
+  animation: mascota-brinco 0.75s cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+@keyframes mascota-brinco {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1, 1); }
+  15% { transform: translate3d(0, 2%, 0) scale(1.03, 0.96); }
+  45% { transform: translate3d(0, -9%, 0) rotate(-3deg) scale(0.98, 1.03); }
+  70% { transform: translate3d(0, 0, 0) rotate(1deg) scale(1.02, 0.98); }
+  85% { transform: translate3d(0, -2%, 0) rotate(0deg); }
+}
+
+/* ---------------------------------------------------------------------
+ * Cara de la mascota (src/components/cara-mascota.tsx)
+ * Los rasgos son grupos SVG; cada uno se transforma desde su propio centro.
+ * Unidades px = píxeles del PNG original (965×1200).
+ * --------------------------------------------------------------------- */
+.cara g { transform-box: fill-box; transform-origin: center; }
+/* Mirada: --ox/--oy llegan desde JS (solo PC con mouse) */
+.cara-mirada {
+  transform: translate(var(--ox, 0px), var(--oy, 0px));
+  transition: transform 0.35s ease-out;
+}
+.cara-ojo, .cara-boca { transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+/* Parpadeo (lo dispara JS cada 3–6 s; "2" = doble) */
+.cara[data-parpadeo="1"] .cara-parpado { animation: cara-parpadeo 0.2s ease-in-out; }
+.cara[data-parpadeo="2"] .cara-parpado { animation: cara-parpadeo-doble 0.5s ease-in-out; }
+@keyframes cara-parpadeo {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.08); }
+}
+@keyframes cara-parpadeo-doble {
+  0%, 44%, 100% { transform: scaleY(1); }
+  20%, 66% { transform: scaleY(0.08); }
+}
+/* Pantalla encendida: el brillo pulsa solo con opacity (no repinta) */
+.cara-brillo { animation: cara-pulso 2.8s ease-in-out infinite; }
+@keyframes cara-pulso {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Expresiones */
+.cara[data-expresion="feliz"] .cara-ojo,
+.zona-saludo:has(.dispara-saludo:hover, .dispara-saludo:focus-visible) .cara .cara-ojo {
+  transform: translateY(-6px) scale(1.05, 1.2);
+}
+.cara[data-expresion="feliz"] .cara-boca,
+.zona-saludo:has(.dispara-saludo:hover, .dispara-saludo:focus-visible) .cara .cara-boca {
+  transform: translateY(4px) scale(1.18, 1.25);
+}
+.cara[data-expresion="triste"] .cara-ojo-i { transform: translateY(8px) rotate(-16deg) scale(0.9, 0.5); }
+.cara[data-expresion="triste"] .cara-ojo-d { transform: translateY(8px) rotate(16deg) scale(0.9, 0.5); }
+.cara[data-expresion="triste"] .cara-boca { transform: translateY(8px) scale(0.75, -0.6); }
+.cara[data-expresion="confundida"] .cara-ojo-i { transform: translateY(4px) scale(0.85, 0.6); }
+.cara[data-expresion="confundida"] .cara-ojo-d { transform: translateY(-8px) rotate(10deg) scale(1.05, 1.15); }
+.cara[data-expresion="confundida"] .cara-boca { transform: translate(4px, 6px) rotate(-12deg) scale(0.6, 0.28); }
+
+/* Celebración (/gracias): brillo más intenso y destellos */
+.cara[data-celebrar] .cara-brillo { animation: cara-pulso-fiesta 1.3s ease-in-out infinite; }
+@keyframes cara-pulso-fiesta {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+.cara-destello {
+  opacity: 0;
+  animation: cara-destello 2.6s ease-in-out 1.2s infinite;
+}
+@keyframes cara-destello {
+  0%, 100% { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  20% { opacity: 1; transform: scale(1) rotate(45deg); }
+  40% { opacity: 0; transform: scale(0.4) rotate(90deg); }
 }
 
 /* Parallax: la mascota sigue un poco al mouse (variables desde JS, solo PC) */
@@ -333,9 +405,14 @@
   .anim-fondo-a, .anim-fondo-b, .anim-particula, .anim-entrada, .anim-flotar,
   .anim-halo, .anim-salto, .aparecer, .anim-vida, .anim-sombra, .anim-sombra-salto,
   .zona-saludo:has(.dispara-saludo:hover, .dispara-saludo:focus-visible) .anim-saludo,
-  .mascota:hover .anim-saludo, .mascota:active .anim-saludo {
+  .mascota:hover .anim-saludo, .mascota:active .anim-saludo,
+  .cara-parpado, .cara-brillo, .cara-destello {
     animation: none !important;
   }
+  .cara-brillo { opacity: 0.85; }
+  .cara-destello { opacity: 0; }
+  .cara-mirada { transform: none !important; }
+  .cara-mirada, .cara-ojo, .cara-boca { transition: none; }
   .parallax-mouse { transform: none !important; transition: none; }
   html { scroll-behavior: auto; }
 }

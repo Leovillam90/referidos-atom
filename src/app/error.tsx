@@ -13,7 +13,7 @@ export default function ErrorInesperado({ error, retry }: { error: unknown; retr
 
   return (
     <MarcoAcceso>
-      <ConMascota movimiento="quieta">
+      <ConMascota movimiento="quieta" expresion="triste">
       <Card className="w-full max-w-md">
         <CardHeader>
           <p className="text-xs font-bold tracking-[0.2em] text-destructive uppercase">Algo salió mal</p>

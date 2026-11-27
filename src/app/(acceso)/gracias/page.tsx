@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 
 export default function PaginaGracias({ searchParams }: PageProps<"/gracias">) {
   return (
-    <ConMascota movimiento="saltar" prioridad>
+    <ConMascota movimiento="saltar" expresion="feliz" celebrar prioridad>
     <Card className="w-full max-w-xl">
       <CardHeader>
         <CircleCheck className="size-9 text-sea-green" aria-hidden />

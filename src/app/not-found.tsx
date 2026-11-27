@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Página no encontrada · Referidos A
 export default function NoEncontrada() {
   return (
     <MarcoAcceso>
-      <ConMascota movimiento="flotar">
+      <ConMascota movimiento="flotar" expresion="confundida">
       <Card className="w-full max-w-md">
         <CardHeader>
           <p className="text-xs font-bold tracking-[0.2em] text-sea-green uppercase">Error 404</p>
