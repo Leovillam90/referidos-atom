@@ -1,0 +1,14 @@
+# Archivos que NO se suben a Vercel con "vercel deploy" (las claves van en
+# Settings → Environment Variables, nunca en archivos).
+.env
+.env.local
+.env*.local
+.env.development
+.env.production
+node_modules
+.next
+.vercel
+.git
+*service-account*.json
+credenciales*.json
+*.pem
