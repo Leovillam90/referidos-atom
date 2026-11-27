@@ -257,7 +257,10 @@
 
 /* En el celular: animaciones más ligeras (sin fondo en movimiento) */
 @media (max-width: 767px) {
-  .anim-fondo-a, .anim-fondo-b, .anim-particula, .anim-halo { animation: none; }
+  /* Celular: solo la entrada con rebote y el salto de /gracias (2 veces).
+     Las animaciones infinitas gastan batería y frenan los celulares lentos. */
+  .anim-fondo-a, .anim-fondo-b, .anim-particula, .anim-halo, .anim-flotar { animation: none; }
+  .anim-salto { animation-iteration-count: 2; }
   .anim-particula { opacity: 0.35; }
   .anim-halo { opacity: 0.6; }
 }
