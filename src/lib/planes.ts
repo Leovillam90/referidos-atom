@@ -1,4 +1,5 @@
 import "server-only";
+import { connection } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import type { Plan, PlanBasico } from "@/lib/estados";
@@ -19,11 +20,13 @@ export async function traerPlanes(supabase: SupabaseClient): Promise<Plan[]> {
  * el referido NO debe ver el valor del bono.
  */
 export async function planesParaFormulario(): Promise<PlanBasico[]> {
+  await connection(); // consulta en vivo, solo en la visita real
   const planes = await traerPlanes(crearClienteAdmin());
   return planes.filter((p) => p.activo).map(({ id, nombre }) => ({ id, nombre }));
 }
 
 export async function buscarPlan(id: string): Promise<Plan | null> {
+  await connection(); // consulta en vivo, solo en la visita real
   const planes = await traerPlanes(crearClienteAdmin());
   return planes.find((p) => p.id === id) ?? null;
 }

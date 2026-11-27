@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 /**
@@ -8,6 +9,10 @@ import { createServerClient } from "@supabase/ssr";
  * También respeta Row Level Security.
  */
 export async function crearClienteServidor() {
+  // La sesión se verifica comparando el vencimiento del token con la hora
+  // actual (Date.now). Next.js no permite usar la hora mientras prepara la
+  // página por adelantado (prefetch), así que esperamos a la visita real.
+  await connection();
   const cookieStore = await cookies();
 
   return createServerClient(

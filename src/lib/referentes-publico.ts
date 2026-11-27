@@ -1,4 +1,5 @@
 import "server-only";
+import { connection } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { campoCodigo } from "@/lib/validaciones";
 
@@ -16,6 +17,10 @@ export type ReferentePublico = {
 export async function buscarReferentePorCodigo(codigo: string): Promise<ReferentePublico | null> {
   const valido = campoCodigo.safeParse(codigo);
   if (!valido.success) return null;
+
+  // Dato en vivo (el link puede desactivarse): se consulta en cada visita,
+  // no mientras Next.js prepara la página por adelantado.
+  await connection();
 
   const { data, error } = await crearClienteAdmin()
     .from("referentes")
