@@ -1,22 +1,46 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BotonPdf } from "./boton-pdf";
 
 export const metadata: Metadata = { title: "Términos del programa de referidos · Referidos ATOM" };
 
 /*
  * Texto legal oficial: «Términos y Condiciones del Programa de Referidos ATOM»,
- * versión 1.0, vigente desde el 01/12/2026. Si cambias el texto, cambia
- * también TERMINOS_VERSION en .env.local y en Vercel, para saber qué versión
- * aceptó cada referente.
+ * versión 1.0, vigente desde el 01/12/2026. La versión que se muestra arriba
+ * sale de TERMINOS_VERSION (la misma que se guarda cuando un referente
+ * acepta). Si cambias el texto, cambia TERMINOS_VERSION en .env.local y en
+ * Vercel, y VIGENTE_DESDE aquí abajo.
  *
  * Los plazos (30 días) y los valores de los bonos están escritos tal como los
  * fija el documento legal. Si cambias la tabla reglas_programa o planes,
  * actualiza también este texto (y su versión).
  */
 
-const VERSION_DOCUMENTO = "1.0";
+const VERSION_DOCUMENTO = process.env.TERMINOS_VERSION?.trim() || "1.0";
 const VIGENTE_DESDE = "01/12/2026";
+
+const SECCIONES = [
+  "Definiciones",
+  "Aceptación y validez electrónica",
+  "Naturaleza jurídica de la relación",
+  "Requisitos de participación e inhabilidades",
+  "Registro y seguridad de la cuenta",
+  "Funcionamiento del programa y reglas de atribución",
+  "El bono: condiciones, valores y pago",
+  "Obligaciones del referente",
+  "Conductas prohibidas",
+  "Auditoría, suspensión y fraude",
+  "Propiedad intelectual",
+  "Tratamiento de datos personales",
+  "Comunicaciones operativas",
+  "Modificación y terminación del programa",
+  "Limitación de responsabilidad y prevención de LA/FT",
+  "Peticiones, quejas y reclamos (PQR)",
+  "Ley aplicable y jurisdicción",
+  "Disposiciones generales",
+  "Datos de contacto del organizador",
+];
 
 function Enlace({ href, children }: { href: string; children: React.ReactNode }) {
   return (
@@ -36,15 +60,31 @@ function Correo() {
 
 export default function PaginaTerminos() {
   return (
-    <Card className="w-full max-w-2xl">
-      <CardHeader>
+    <Card className="w-full max-w-2xl print:max-w-none print:bg-white print:shadow-none print:ring-0 print:[&_*]:text-black">
+      <CardHeader className="gap-3">
         <CardTitle className="text-2xl font-black">Términos y Condiciones del Programa de Referidos ATOM</CardTitle>
         <CardDescription>
-          Versión {VERSION_DOCUMENTO} · Vigente desde: {VIGENTE_DESDE}
+          Versión {VERSION_DOCUMENTO} · Vigente desde {VIGENTE_DESDE}
         </CardDescription>
+        <div>
+          <BotonPdf />
+        </div>
       </CardHeader>
       <CardContent className="grid gap-5 text-sm leading-relaxed text-muted-foreground [&_h2]:font-bold [&_h2]:text-foreground [&_h3]:font-semibold [&_h3]:text-foreground [&_strong]:text-foreground">
-        <section className="grid gap-2">
+        <nav aria-label="Índice" className="grid gap-2 rounded-2xl border border-border p-4 print:hidden">
+          <h2>Índice</h2>
+          <ol className="grid gap-1">
+            {SECCIONES.map((titulo, i) => (
+              <li key={titulo}>
+                <a href={`#seccion-${i + 1}`} className="text-primary underline-offset-4 hover:underline">
+                  {i + 1}. {titulo}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+
+        <section id="seccion-1" className="grid scroll-mt-6 gap-2">
           <h2>1. Definiciones</h2>
           <p>
             Para efectos de estos Términos y Condiciones, las siguientes expresiones tendrán el significado que se indica a
@@ -95,7 +135,7 @@ export default function PaginaTerminos() {
           </ul>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-2" className="grid scroll-mt-6 gap-2">
           <h2>2. Aceptación y validez electrónica</h2>
           <p>
             Al registrarse como Referente y marcar la casilla de aceptación, el Referente declara haber leído, comprendido
@@ -108,7 +148,7 @@ export default function PaginaTerminos() {
           </p>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-3" className="grid scroll-mt-6 gap-2">
           <h2>3. Naturaleza jurídica de la relación</h2>
           <p>
             La participación en el Programa es estrictamente voluntaria, gratuita y de naturaleza mercantil independiente.
@@ -128,7 +168,7 @@ export default function PaginaTerminos() {
           </p>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-4" className="grid scroll-mt-6 gap-2">
           <h2>4. Requisitos de participación e inhabilidades</h2>
           <p>
             Podrán participar personas naturales mayores de edad con plena capacidad legal, y personas jurídicas
@@ -149,7 +189,7 @@ export default function PaginaTerminos() {
           </ul>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-5" className="grid scroll-mt-6 gap-2">
           <h2>5. Registro y seguridad de la cuenta</h2>
           <p>
             El Referente deberá suministrar información veraz y mantenerla actualizada. ATOM podrá solicitar en cualquier
@@ -164,7 +204,7 @@ export default function PaginaTerminos() {
           </p>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-6" className="grid scroll-mt-6 gap-2">
           <h2>6. Funcionamiento del programa y reglas de atribución</h2>
           <ul className="list-disc space-y-1 pl-5">
             <li>
@@ -207,7 +247,7 @@ export default function PaginaTerminos() {
           </ul>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-7" className="grid scroll-mt-6 gap-2">
           <h2>7. El bono: condiciones, valores y pago</h2>
 
           <h3>7.1 Condiciones acumulativas para generar el Bono</h3>
@@ -307,7 +347,7 @@ export default function PaginaTerminos() {
           </p>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-8" className="grid scroll-mt-6 gap-2">
           <h2>8. Obligaciones del referente</h2>
           <p>El Referente se obliga a:</p>
           <ol className="list-[lower-alpha] space-y-1 pl-5">
@@ -325,7 +365,7 @@ export default function PaginaTerminos() {
           </ol>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-9" className="grid scroll-mt-6 gap-2">
           <h2>9. Conductas prohibidas</h2>
           <p>Queda estrictamente prohibido al Referente:</p>
           <ol className="list-[lower-alpha] space-y-1 pl-5">
@@ -357,7 +397,7 @@ export default function PaginaTerminos() {
           </ol>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-10" className="grid scroll-mt-6 gap-2">
           <h2>10. Auditoría, suspensión y fraude</h2>
           <p>
             ATOM se reserva el derecho de auditar en cualquier momento la trazabilidad de Referentes y Referidos, pudiendo
@@ -377,7 +417,7 @@ export default function PaginaTerminos() {
           </p>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-11" className="grid scroll-mt-6 gap-2">
           <h2>11. Propiedad intelectual</h2>
           <p>
             Las marcas, logotipos, signos distintivos, software, diseños y contenidos de ATOM son propiedad exclusiva de
@@ -387,7 +427,7 @@ export default function PaginaTerminos() {
           </p>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-12" className="grid scroll-mt-6 gap-2">
           <h2>12. Tratamiento de datos personales</h2>
           <p>
             ATOM SOLUTIONS DATA S.A.S., en calidad de Responsable del Tratamiento, tratará los datos personales de
@@ -406,7 +446,7 @@ export default function PaginaTerminos() {
           </p>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-13" className="grid scroll-mt-6 gap-2">
           <h2>13. Comunicaciones operativas</h2>
           <p>
             Al aceptar estos Términos, el Referente autoriza a ATOM a remitir notificaciones operativas y transaccionales a
@@ -417,7 +457,7 @@ export default function PaginaTerminos() {
           </p>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-14" className="grid scroll-mt-6 gap-2">
           <h2>14. Modificación y terminación del programa</h2>
           <p>
             ATOM podrá modificar estos Términos, actualizar la tabla de valores de los Bonos o dar por terminado el
@@ -428,11 +468,7 @@ export default function PaginaTerminos() {
             Los cambios no afectarán los Bonos que ya se encuentren confirmados en estado «Por pagar» a la fecha de entrada
             en vigor de la modificación. Respecto de los Registros Vigentes y los Bonos que se encuentren en estado «En
             verificación» al momento del cambio o terminación, estos continuarán su trámite bajo las condiciones vigentes
-            al momento de su Activación, siempre que cumplan el período de permanencia de 30 días en{" "}
-            <a href="https://www.atomsolutionsdata.com" className="text-primary underline underline-offset-4">
-              https://www.atomsolutionsdata.com
-            </a>
-            .
+            al momento de su Activación, siempre que cumplan el período de permanencia de 30 días.
           </p>
           <p>
             Si el Referente continúa utilizando su Link tras la entrada en vigor de las modificaciones, se entenderá que
@@ -441,7 +477,7 @@ export default function PaginaTerminos() {
           </p>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-15" className="grid scroll-mt-6 gap-2">
           <h2>15. Limitación de responsabilidad y prevención de LA/FT</h2>
           <ul className="list-disc space-y-1 pl-5">
             <li>
@@ -466,7 +502,7 @@ export default function PaginaTerminos() {
           </ul>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-16" className="grid scroll-mt-6 gap-2">
           <h2>16. Peticiones, quejas y reclamos (PQR)</h2>
           <p>
             Las peticiones, quejas y reclamos relacionados con el Programa deberán radicarse a través del canal oficial de
@@ -477,7 +513,7 @@ export default function PaginaTerminos() {
           </p>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-17" className="grid scroll-mt-6 gap-2">
           <h2>17. Ley aplicable y jurisdicción</h2>
           <p>
             Estos Términos se rigen íntegramente por las leyes de la República de Colombia. Ante cualquier controversia
@@ -488,7 +524,7 @@ export default function PaginaTerminos() {
           </p>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-18" className="grid scroll-mt-6 gap-2">
           <h2>18. Disposiciones generales</h2>
           <p>
             La nulidad o invalidez de una cláusula no afectará la validez de las demás disposiciones. La tolerancia o no
@@ -499,7 +535,7 @@ export default function PaginaTerminos() {
           </p>
         </section>
 
-        <section className="grid gap-2">
+        <section id="seccion-19" className="grid scroll-mt-6 gap-2">
           <h2>19. Datos de contacto del organizador</h2>
           <ul className="space-y-1">
             <li>Programa de Referidos ATOM · ATOM SOLUTIONS DATA S.A.S. (NIT 901.848.364-4)</li>

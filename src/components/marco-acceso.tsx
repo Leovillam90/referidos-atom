@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 export function MarcoAcceso({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
     <div className="relative isolate flex flex-1 flex-col overflow-x-clip">
-      <FondoDigital className="fixed" />
+      <FondoDigital className="fixed print:hidden" />
       <main
         className={cn(
           "flex flex-1 flex-col items-center gap-5 px-[clamp(1rem,4vw,2.5rem)] pt-6 pb-6 sm:gap-8 sm:pt-10 lg:justify-center",
@@ -22,7 +22,7 @@ export function MarcoAcceso({ children, className }: { children: React.ReactNode
       >
         <Link
           href="/"
-          className="rounded-2xl p-1.5 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+          className="rounded-2xl p-1.5 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none print:hidden"
         >
           <Logo tipo="vertical" className="h-14 sm:h-20" prioridad />
         </Link>
