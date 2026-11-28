@@ -172,7 +172,7 @@ Páginas disponibles:
 | `/panel` | Panel del referente: su link y sus referidos (requiere sesión) |
 | `/r/CODIGO` | Formulario público del referido (sin login) |
 | `/politica-datos` | Política de tratamiento de datos que aceptan referentes y referidos |
-| `/terminos` | Términos del programa que acepta el referente (texto base con marcas **[POR REVISAR]** para el equipo legal) |
+| `/terminos` | Términos del programa que acepta el referente (texto legal oficial, versión 1.0, vigente desde el 01/12/2026) |
 | `/confirmar/...` | Donde el referido confirma quién lo invitó (solo si la confirmación por correo está activa) |
 | `/gracias` | Página que ve el referido al terminar: 3 pasos para activarse |
 | `/admin` | Panel del super_admin: referentes, referidos, pagos y reportes |
@@ -186,7 +186,7 @@ Páginas disponibles:
 4. Vuelve a **/panel**: el referido aparece en la tabla. Aparece con su plan solicitado y el bono **estimado**. Si ya está en la hoja de afiliados, en unos segundos pasa a **Por pagar** (recarga la página). Al referente le llega un correo si configuraste el SMTP.
 5. Si intentas registrar a la misma persona otra vez (mismo correo, teléfono o cuenta Dropi), el formulario dice *"Ya estás registrado en el programa; si tienes dudas escríbenos por WhatsApp"*.
 
-> **Antes de publicar:** completa en `src/app/(acceso)/politica-datos/page.tsx` los datos reales de la empresa (correo de contacto, razón social) y haz revisar el texto. Si lo cambias, sube la versión en `POLITICA_DATOS_VERSION`. Haz lo mismo con `src/app/(acceso)/terminos/page.tsx` (busca **[POR REVISAR]**) y `TERMINOS_VERSION`.
+> **Antes de publicar:** completa en `src/app/(acceso)/politica-datos/page.tsx` los datos reales de la empresa (correo de contacto, razón social) y haz revisar el texto. Si lo cambias, sube la versión en `POLITICA_DATOS_VERSION`. Si cambias `src/app/(acceso)/terminos/page.tsx`, sube también `TERMINOS_VERSION`.
 
 ---
 
