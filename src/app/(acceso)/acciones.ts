@@ -21,6 +21,8 @@ export type EstadoFormulario = {
   enlace?: { texto: string; url: string };
   errores?: Record<string, string>;
   valores?: Record<string, string>;
+  /** Correo al que se envió el link y el código (pantalla de espera) */
+  correo?: string;
 };
 
 function urlDeRegreso() {
@@ -164,7 +166,8 @@ export async function registrarReferente(
 
   return {
     ok: true,
-    mensaje: `Te enviamos un link a ${datos.correo}. Ábrelo para confirmar tu registro y entrar a tu panel.`,
+    correo: datos.correo,
+    mensaje: `Te enviamos un link a ${datos.correo}. Ábrelo para confirmar tu registro y entrar a tu panel, o escribe aquí el código que trae.`,
   };
 }
 
@@ -197,6 +200,7 @@ export async function enviarLinkIngreso(
 
   return {
     ok: true,
-    mensaje: `Si ${resultado.data.correo} está registrado, te llegará un link para entrar. Revisa también la carpeta de spam.`,
+    correo: resultado.data.correo,
+    mensaje: `Si ${resultado.data.correo} está registrado, te llegará un link para entrar y un código. Revisa también la carpeta de spam.`,
   };
 }

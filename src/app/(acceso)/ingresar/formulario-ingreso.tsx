@@ -11,7 +11,7 @@ const inicial: EstadoFormulario = { ok: false };
 export function FormularioIngreso() {
   const [estado, accion, enviando] = useActionState(enviarLinkIngreso, inicial);
 
-  if (estado.ok && estado.mensaje) return <AvisoEnviado mensaje={estado.mensaje} />;
+  if (estado.ok && estado.mensaje) return <AvisoEnviado mensaje={estado.mensaje} correo={estado.correo} />;
 
   return (
     <form action={accion} className="grid gap-4" noValidate>

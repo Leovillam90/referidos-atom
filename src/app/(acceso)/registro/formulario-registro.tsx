@@ -17,7 +17,7 @@ const inicial: EstadoFormulario = { ok: false };
 export function FormularioRegistro({ claveTurnstile }: { claveTurnstile: string | null }) {
   const [estado, accion, enviando] = useActionState(registrarReferente, inicial);
 
-  if (estado.ok && estado.mensaje) return <AvisoEnviado mensaje={estado.mensaje} />;
+  if (estado.ok && estado.mensaje) return <AvisoEnviado mensaje={estado.mensaje} correo={estado.correo} />;
 
   const e = estado.errores ?? {};
   const v = estado.valores ?? {};

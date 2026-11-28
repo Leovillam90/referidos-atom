@@ -26,3 +26,8 @@ sin contraseña. Tienen el mismo diseño que los correos de la app
 - El logo se carga desde `{{ .SiteURL }}/brand/logo-horizontal-texto-blanco.png`,
   así que solo se ve cuando la app está publicada (no en `localhost`).
 - No cambies lo que está entre `{{ }}`: Supabase lo reemplaza al enviar.
+- `{{ .Token }}` es el **código de 6 dígitos** que la persona puede escribir en la
+  pantalla "Revisa tu correo" en lugar de abrir el link. El link y el código son
+  el mismo acceso: al usar uno, el otro deja de servir.
+- El largo del código está en Authentication → Providers → Email →
+  **Email OTP Length**: debe ser **6** (la app pide 6 dígitos).

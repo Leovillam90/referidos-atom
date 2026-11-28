@@ -34,5 +34,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth/error", origin));
   }
 
-  return NextResponse.redirect(new URL(destino, origin));
+  // "bienvenida=1": el panel muestra "Ya puedes cerrar la otra pestaña" y
+  // avisa a la pestaña donde se pidió el link (ver AvisoBienvenida).
+  const url = new URL(destino, origin);
+  url.searchParams.set("bienvenida", "1");
+  return NextResponse.redirect(url);
 }

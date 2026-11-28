@@ -19,6 +19,7 @@ import { formatoFecha, formatoPesos } from "@/lib/formato";
 import { urlSitio } from "@/lib/config-programa";
 import { cerrarSesion } from "./acciones";
 import { CopiarLink } from "./copiar-link";
+import { AvisoBienvenida } from "./aviso-bienvenida";
 import { MarcoApp } from "@/components/marco-app";
 import { Mascota } from "@/components/mascota";
 
@@ -37,6 +38,7 @@ export default function PaginaPanel() {
         </form>
       }
     >
+      <AvisoBienvenida />
       {/* La sesión se lee en el momento de la visita, por eso va dentro de Suspense */}
       <Suspense fallback={<CargandoPanel />}>
         <ContenidoPanel />
