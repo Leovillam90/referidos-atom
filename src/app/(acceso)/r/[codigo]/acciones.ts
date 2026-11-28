@@ -2,7 +2,7 @@
 
 import { randomBytes } from "node:crypto";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { after } from "next/server";
 import { revisarCelular } from "@/lib/celular-servidor";
 import { linkWhatsAppAyuda, urlSitio } from "@/lib/config-programa";
@@ -19,7 +19,7 @@ import { huellaToken } from "@/lib/token";
 import { verificarTurnstile } from "@/lib/turnstile";
 import { erroresPorCampo, esquemaReferido } from "@/lib/validaciones";
 import type { EstadoFormulario } from "../../acciones";
-import { ipDelVisitante, logError, registrarError } from "@/lib/registro";
+import { errorConCodigo, ipDelVisitante, registrarError } from "@/lib/registro";
 
 function leer(formData: FormData, campo: string) {
   const v = formData.get(campo);
@@ -39,20 +39,24 @@ const MENSAJES = {
   limite: "Recibimos muchos registros en poco tiempo. Espera una hora y vuelve a intentarlo.",
   noDisponible: "Este link no está disponible.",
   robot: "Confirma la verificación anti-robots y vuelve a enviar el formulario.",
-  error: "No pudimos guardar tus datos. Intenta de nuevo en unos minutos.",
+  error:
+    "No pudimos guardar tus datos por un problema de nuestro lado. Intenta de nuevo en unos minutos; " +
+    "si vuelve a pasar, escríbenos por WhatsApp con el código de abajo.",
+  revisaCampos: "Revisa los campos marcados en rojo.",
 };
 
-/**
- * Registro de un referido. Las reglas se revisan aquí para dar un mensaje
- * claro y OTRA VEZ en la base de datos (validar_nuevo_referido en
- * schema.sql), que es la que manda: duplicados, auto-referidos, link
- * suspendido y límites por hora.
- */
-export async function registrarReferido(
-  _anterior: EstadoFormulario,
-  formData: FormData,
+/** Error inesperado: log + errores_sistema con un código que ve la persona. */
+async function fallaInesperada(
+  etapa: string,
+  valores: Record<string, string>,
+  ...detalle: unknown[]
 ): Promise<EstadoFormulario> {
-  const valores = {
+  const codigo = await errorConCodigo("referido", etapa, ...detalle);
+  return { ...conWhatsApp(MENSAJES.error, valores), codigo };
+}
+
+function leerValores(formData: FormData) {
+  return {
     codigo: leer(formData, "codigo"),
     nombre: leer(formData, "nombre"),
     plan_solicitado: leer(formData, "plan_solicitado"),
@@ -62,6 +66,31 @@ export async function registrarReferido(
     cuenta_dropi: leer(formData, "cuenta_dropi"),
     tipo: leer(formData, "tipo"),
   };
+}
+
+/**
+ * Registro de un referido. Las reglas se revisan aquí para dar un mensaje
+ * claro y OTRA VEZ en la base de datos (validar_nuevo_referido en
+ * schema.sql), que es la que manda: duplicados, auto-referidos, link
+ * suspendido y límites por hora.
+ */
+export async function registrarReferido(
+  anterior: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  try {
+    return await registrarReferidoSinCapturar(anterior, formData);
+  } catch (e) {
+    unstable_rethrow(e); // redirect() a /gracias no es un error
+    return fallaInesperada("excepción", leerValores(formData), e);
+  }
+}
+
+async function registrarReferidoSinCapturar(
+  _anterior: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  const valores = leerValores(formData);
 
   // Campo trampa invisible: las personas no lo ven, los robots lo llenan.
   if (leer(formData, "sitio_web")) redirect("/gracias");
@@ -76,6 +105,7 @@ export async function registrarReferido(
   if (!resultado.success || !celular.ok) {
     return {
       ok: false,
+      mensaje: MENSAJES.revisaCampos,
       errores: {
         ...(resultado.success ? {} : erroresPorCampo(resultado.error)),
         ...(celular.ok ? {} : { telefono: celular.mensaje }),
@@ -98,10 +128,7 @@ export async function registrarReferido(
     p_codigo: datos.codigo,
     p_ip: ip,
   });
-  if (errorIntento) {
-    logError("[referido] registrar intento:", errorIntento.message);
-    return { ok: false, mensaje: MENSAJES.error, valores };
-  }
+  if (errorIntento) return fallaInesperada("registrar intento", valores, errorIntento.code, errorIntento.message);
   if (permitido === false) return { ok: false, mensaje: MENSAJES.limite, valores };
 
   // El código y el plan se vuelven a verificar aquí: los campos del
@@ -112,7 +139,12 @@ export async function registrarReferido(
   ]);
   if (!referente) return { ok: false, mensaje: MENSAJES.noDisponible, valores };
   if (!plan || !plan.activo) {
-    return { ok: false, errores: { plan_solicitado: "Elige uno de los planes de la lista" }, valores };
+    return {
+      ok: false,
+      mensaje: MENSAJES.revisaCampos,
+      errores: { plan_solicitado: "Elige uno de los planes de la lista" },
+      valores,
+    };
   }
 
   // No auto-referirse: CUALQUIER identificador del formulario (correo,
@@ -123,10 +155,7 @@ export async function registrarReferido(
   }
 
   const version = process.env.POLITICA_DATOS_VERSION?.trim();
-  if (!version) {
-    logError("[referido] Falta la variable POLITICA_DATOS_VERSION");
-    return { ok: false, mensaje: MENSAJES.error, valores };
-  }
+  if (!version) return fallaInesperada("configuración", valores, "Falta la variable de entorno POLITICA_DATOS_VERSION");
 
   // Token para el correo de confirmación. Se guarda solo su huella
   // (sha256); la base de datos lo descarta si la confirmación está apagada.
@@ -161,10 +190,14 @@ export async function registrarReferido(
     if (clave.includes("LIMITE")) return { ok: false, mensaje: MENSAJES.limite, valores };
     if (clave.includes("LINK_NO_DISPONIBLE")) return { ok: false, mensaje: MENSAJES.noDisponible, valores };
     if (clave.includes("TELEFONO_INVALIDO")) {
-      return { ok: false, errores: { telefono: mensajeCelular(datos.telefono_pais) }, valores };
+      return {
+        ok: false,
+        mensaje: MENSAJES.revisaCampos,
+        errores: { telefono: mensajeCelular(datos.telefono_pais) },
+        valores,
+      };
     }
-    logError("[referido] insertar:", error.code, error.message);
-    return { ok: false, mensaje: MENSAJES.error, valores };
+    return fallaInesperada("insertar", valores, error.code, error.message);
   }
 
   // DESPUÉS de responder (el referido no espera):

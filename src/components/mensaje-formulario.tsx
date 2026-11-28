@@ -1,5 +1,14 @@
 /** Mensaje de error general de un formulario, con un link opcional (ej. WhatsApp). */
-export function MensajeError({ mensaje, enlace }: { mensaje?: string; enlace?: { texto: string; url: string } }) {
+export function MensajeError({
+  mensaje,
+  enlace,
+  codigo,
+}: {
+  mensaje?: string;
+  enlace?: { texto: string; url: string };
+  /** Código de un error inesperado (ej. R-4F2A) para rastrearlo en los logs */
+  codigo?: string;
+}) {
   if (!mensaje) return null;
   return (
     <p role="alert" className="text-sm text-destructive">
@@ -16,6 +25,11 @@ export function MensajeError({ mensaje, enlace }: { mensaje?: string; enlace?: {
             {enlace.texto}
           </a>
         </>
+      )}
+      {codigo && (
+        <span className="mt-1 block text-xs text-muted-foreground">
+          Código: <span className="font-mono font-bold select-all">{codigo}</span>
+        </span>
       )}
     </p>
   );

@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { ocultarDatos, textoError } from "@/lib/ocultar";
+import { codigoReferencia } from "@/lib/codigo-referencia";
 
 export { ocultarDatos, textoError };
 
@@ -29,6 +30,22 @@ const esIp = z.union([z.ipv4(), z.ipv6()]);
 export function ipDelVisitante(h: Headers): string | null {
   const candidata = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip")?.trim() || "";
   return esIp.safeParse(candidata).success ? candidata : null;
+}
+
+/**
+ * Error inesperado en un formulario público: lo escribe en el log y en
+ * errores_sistema con un código corto, y devuelve ese código para
+ * mostrárselo a la persona. En el log queda como
+ *   [registro R-4F2A] identidad: <detalle sin datos personales>
+ */
+export async function errorConCodigo(origen: string, etapa: string, ...partes: unknown[]): Promise<string> {
+  const codigo = codigoReferencia();
+  const detalle = partes
+    .filter((p) => p !== undefined && p !== null)
+    .map((p) => textoError(p))
+    .join(" ");
+  await registrarError(`${origen} ${codigo}`, `${etapa}: ${detalle || "(sin detalle)"}`, { guardar: true });
+  return codigo;
 }
 
 /** console.error sin datos personales (cada parte pasa por ocultarDatos). */
