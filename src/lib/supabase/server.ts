@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { OPCIONES_COOKIE } from "@/lib/supabase/cookies";
 
 /**
  * Cliente de Supabase para el servidor que actúa "como el usuario
@@ -19,6 +20,7 @@ export async function crearClienteServidor() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
+      cookieOptions: OPCIONES_COOKIE,
       cookies: {
         getAll() {
           return cookieStore.getAll();

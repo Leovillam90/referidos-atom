@@ -4,11 +4,12 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Campo } from "@/components/campo";
 import { AvisoEnviado } from "@/components/aviso-enviado";
+import { Turnstile } from "@/components/turnstile";
 import { enviarLinkIngreso, type EstadoFormulario } from "../acciones";
 
 const inicial: EstadoFormulario = { ok: false };
 
-export function FormularioIngreso() {
+export function FormularioIngreso({ claveTurnstile }: { claveTurnstile: string | null }) {
   const [estado, accion, enviando] = useActionState(enviarLinkIngreso, inicial);
 
   if (estado.ok && estado.mensaje) return <AvisoEnviado mensaje={estado.mensaje} correo={estado.correo} />;
@@ -25,6 +26,7 @@ export function FormularioIngreso() {
         error={estado.errores?.correo}
         required
       />
+      {claveTurnstile && <Turnstile claveSitio={claveTurnstile} reinicio={estado} />}
       {estado.mensaje && !estado.ok && (
         <p role="alert" className="text-sm text-destructive">
           {estado.mensaje}

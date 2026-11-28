@@ -6,6 +6,7 @@ import { cruzarReferidos } from "@/lib/cruce";
 import { leerReglas } from "@/lib/reglas";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { huellaToken, TOKEN_VALIDO } from "@/lib/token";
+import { logError, registrarError } from "@/lib/registro";
 
 export type EstadoConfirmacion = { ok: boolean; mensaje?: string };
 
@@ -30,7 +31,7 @@ export async function confirmarRegistro(_anterior: EstadoConfirmacion, formData:
   const admin = crearClienteAdmin();
   const { data, error } = await admin.rpc("confirmar_referido", { p_token_hash: huellaToken(token) });
   if (error) {
-    console.error("[confirmar]", error.message);
+    logError("[confirmar]", error.message);
     return { ok: false, mensaje: "No pudimos confirmar tu registro. Intenta de nuevo en unos minutos." };
   }
 
@@ -42,13 +43,13 @@ export async function confirmarRegistro(_anterior: EstadoConfirmacion, formData:
       try {
         await cruzarReferidos({ referidoId: id });
       } catch (e) {
-        console.error("[confirmar] cruce:", e instanceof Error ? e.message : e);
+        await registrarError("cruce inmediato", e, { guardar: true });
       }
       try {
         const reglas = await leerReglas(admin);
         await avisarAlReferente(id, reglas.dias_vigencia_registro);
       } catch (e) {
-        console.error("[confirmar] correo al referente:", e instanceof Error ? e.message : e);
+        await registrarError("correo de nuevo referido", e, { guardar: true });
       }
     });
   }

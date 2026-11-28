@@ -1,6 +1,7 @@
 import "server-only";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { mensajeCelular, validarCelular, type ResultadoCelular } from "@/lib/telefono";
+import { logError } from "@/lib/registro";
 
 /**
  * Validación del celular en el servidor: las mismas reglas del navegador
@@ -17,7 +18,7 @@ export async function revisarCelular(valor: string, pais: string): Promise<Resul
     .eq("telefono", r.telefono)
     .maybeSingle();
   // Si la consulta falla, decide la base de datos al guardar
-  if (error) console.error("[celular] lista de bloqueados:", error.message);
+  if (error) logError("[celular] lista de bloqueados:", error.message);
   if (data) return { ok: false, pais: r.pais, motivo: "bloqueado", mensaje: mensajeCelular(r.pais) };
   return r;
 }

@@ -15,12 +15,16 @@
 --    pagos                → pagos de bonos hechos a un referente
 --    referidos_historial  → quién cambió qué, cuándo y por qué en cada referido
 --    reglas_historial     → cambios en las reglas del programa
---    registros_intentos   → intentos del formulario público (límite por IP)
+--    registros_intentos   → intentos de los formularios públicos (límite por IP)
+--    ejecuciones_cruce    → cada cruce completo con la hoja (inicio, fin, resultado)
+--    errores_sistema      → fallas de correo, hoja o anti-robots (se ven en /admin)
+--    telefonos_bloqueados → celulares que no se aceptan (/admin/reglas)
 --    Storage "soportes-pagos" → comprobantes de pago (bucket PRIVADO)
 --
 --  Seguridad (Row Level Security):
 --    • Un referente solo puede ver SU fila, SUS referidos, SUS pagos y
---      los soportes de SUS pagos (y nada de eso si está suspendido).
+--      los soportes de SUS pagos (y nada de eso si está suspendido). De
+--      sus referidos NO ve correo, celular ni cuenta Dropi.
 --    • El super_admin puede ver todo. Editar, suspender, cambiar reglas y
 --      pagar solo se hace con funciones que verifican que quien llama es
 --      super_admin.
@@ -92,6 +96,7 @@ create or replace function public.normalizar_telefono(t text)
 returns text
 language sql
 immutable
+set search_path = public, pg_catalog
 as $$
   select case
     when e = '' then null
@@ -111,6 +116,7 @@ create or replace function public.normalizar_correo_identidad(c text)
 returns text
 language sql
 immutable
+set search_path = public, pg_catalog
 as $$
   select case
     when v = '' then null
@@ -121,6 +127,23 @@ as $$
   from (select lower(regexp_replace(coalesce(c, ''), '\s', '', 'g')) as v) s;
 $$;
 
+-- Correo OCULTO para el panel del referente (Ley 1581: el referente no ve
+-- los datos de contacto de sus referidos, solo una pista para reconocerlos).
+--   'ana.perez@gmail.com' → 'an•••@gmail.com'
+create or replace function public.ocultar_correo(c text)
+returns text
+language sql
+immutable
+set search_path = public, pg_catalog
+as $$
+  select case
+    when position('@' in v) < 2 then null
+    else left(split_part(v, '@', 1), least(2, greatest(1, length(split_part(v, '@', 1)) - 1)))
+         || '•••@' || split_part(v, '@', 2)
+  end
+  from (select lower(trim(coalesce(c, ''))) as v) s;
+$$;
+
 -- Cuenta Dropi comparable: minúsculas y sin espacios. Si es un correo,
 -- se compara como correo. Respuestas que no identifican a nadie
 -- ("no tengo", "ninguna", "n/a"...) no cuentan para la comparación.
@@ -128,6 +151,7 @@ create or replace function public.normalizar_dropi(t text)
 returns text
 language sql
 immutable
+set search_path = public, pg_catalog
 as $$
   select case
     when v = '' or length(v) < 3 then null
@@ -144,6 +168,7 @@ create or replace function public.normalizar_dropi_telefono(t text)
 returns text
 language sql
 immutable
+set search_path = public, pg_catalog
 as $$
   select case
     when v ~ '^\+?[0-9().-]+$' and length(coalesce(public.normalizar_telefono(v), '')) >= 7
@@ -160,6 +185,7 @@ create or replace function public.identificadores_persona(p_correo text, p_telef
 returns text[]
 language sql
 immutable
+set search_path = public, pg_catalog
 as $$
   select coalesce(array_agg(distinct x order by x), '{}'::text[])
   from unnest(array[
@@ -178,6 +204,7 @@ drop function if exists public.bloquear_identidad(text, text, text);
 create or replace function public.bloquear_identidad(p_ids text[])
 returns void
 language plpgsql
+set search_path = public, pg_catalog
 as $$
 declare
   k text;
@@ -194,6 +221,7 @@ create or replace function public.normalizar_nombre_plan(t text)
 returns text
 language sql
 immutable
+set search_path = public, pg_catalog
 as $$
   select nullif(
     regexp_replace(
@@ -210,6 +238,7 @@ create or replace function public.generar_codigo_referente()
 returns text
 language plpgsql
 volatile
+set search_path = public, pg_catalog
 as $$
 declare
   alfabeto constant text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -230,6 +259,7 @@ $$;
 create or replace function public.actualizar_updated_at()
 returns trigger
 language plpgsql
+set search_path = public, pg_catalog
 as $$
 begin
   new.updated_at := now();
@@ -251,6 +281,7 @@ create or replace function public.celular_pais(p_pais text)
 returns table (indicativo text, patron_celular text)
 language sql
 immutable
+set search_path = public, pg_catalog
 as $$
   select v.indicativo, v.patron_celular
   from (values
@@ -290,6 +321,7 @@ create or replace function public.telefono_es_falso(p_nacional text)
 returns boolean
 language plpgsql
 immutable
+set search_path = public, pg_catalog
 as $$
 declare
   d text := regexp_replace(coalesce(p_nacional, ''), '\D', '', 'g');
@@ -487,6 +519,7 @@ create trigger reglas_updated_at
 create or replace function public.impedir_borrar_reglas()
 returns trigger
 language plpgsql
+set search_path = public, pg_catalog
 as $$
 begin
   raise exception 'La fila de reglas_programa no se puede borrar; edita sus valores' using errcode = '42501';
@@ -963,7 +996,9 @@ alter table public.referidos
   add column if not exists revision text
     check (revision is null or revision in ('posible_auto_referido', 'afiliado_duplicado')),
   -- País del celular (CO, MX, AR…). El teléfono va en el formato estándar.
-  add column if not exists telefono_pais text check (telefono_pais is null or telefono_pais ~ '^[A-Z]{2}$');
+  add column if not exists telefono_pais text check (telefono_pais is null or telefono_pais ~ '^[A-Z]{2}$'),
+  -- Lo único del contacto que ve el referente en su panel ('an•••@gmail.com')
+  add column if not exists correo_oculto text generated always as (public.ocultar_correo(correo)) stored;
 
 alter table public.referidos drop constraint if exists referidos_estado_valido;
 alter table public.referidos add constraint referidos_estado_valido check (estado_bono in (
@@ -1045,7 +1080,14 @@ create table if not exists public.registros_intentos (
   created_at timestamptz not null default now()
 );
 
+-- 'referido' = formulario /r/CODIGO · 'ingreso' = pedir link de acceso ·
+-- 'registro_referente' = formulario /registro
+alter table public.registros_intentos
+  add column if not exists tipo text not null default 'referido'
+    check (tipo in ('referido', 'ingreso', 'registro_referente'));
+
 create index if not exists registros_intentos_ip_idx on public.registros_intentos (ip, created_at);
+create index if not exists registros_intentos_tipo_idx on public.registros_intentos (tipo, ip, created_at);
 
 -- ---------------------------------------------------------------------
 -- ¿Esta persona ya está "ocupada" en el programa?
@@ -1569,14 +1611,115 @@ begin
   if p_ip is not null then
     perform pg_advisory_xact_lock(hashtextextended('intento:' || p_ip::text, 0));
     if (select count(*) from public.registros_intentos i
-         where i.ip = p_ip and i.created_at > now() - interval '1 hour')
+         where i.ip = p_ip and i.tipo = 'referido' and i.created_at > now() - interval '1 hour')
        >= r.max_registros_por_link_por_hora then
       return false;
     end if;
   end if;
-  insert into public.registros_intentos (codigo, ip) values (left(upper(p_codigo), 16), p_ip);
+  insert into public.registros_intentos (codigo, ip, tipo) values (left(upper(p_codigo), 16), p_ip, 'referido');
   return true;
 end;
+$$;
+
+-- Límite de intentos por IP para pedir el link de acceso ('ingreso') y
+-- para registrarse como referente ('registro_referente'). El máximo por
+-- hora lo pone la app (src/lib/limites.ts). Devuelve false si ya llegó al
+-- límite; si no, anota el intento. Sin IP no se limita (lo protege el
+-- límite propio de Supabase Auth).
+create or replace function public.registrar_intento(p_tipo text, p_ip inet, p_max int)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_tipo not in ('ingreso', 'registro_referente') then
+    raise exception 'Tipo de intento no válido' using errcode = '22023';
+  end if;
+  if p_ip is null then
+    return true;
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('intento:' || p_tipo || ':' || p_ip::text, 0));
+  if (select count(*) from public.registros_intentos i
+       where i.ip = p_ip and i.tipo = p_tipo and i.created_at > now() - interval '1 hour')
+     >= greatest(coalesce(p_max, 1), 1) then
+    return false;
+  end if;
+  insert into public.registros_intentos (ip, tipo) values (p_ip, p_tipo);
+  return true;
+end;
+$$;
+
+-- ---------------------------------------------------------------------
+-- Ejecuciones del cruce completo (cron diario y botón "Actualizar cruce")
+--   Cada ejecución queda registrada (inicio, fin, resultado o error) y se
+--   ve en /admin. Nunca corren dos a la vez: si ya hay una en curso, la
+--   nueva queda como "omitido". Una "en curso" de más de 15 minutos se da
+--   por interrumpida (Vercel corta las funciones mucho antes).
+-- ---------------------------------------------------------------------
+create table if not exists public.ejecuciones_cruce (
+  id           bigint generated always as identity primary key,
+  origen       text not null check (origen in ('cron', 'admin')),
+  estado       text not null default 'en_curso' check (estado in ('en_curso', 'ok', 'error', 'omitido')),
+  iniciado_en  timestamptz not null default now(),
+  terminado_en timestamptz,
+  resumen      jsonb,
+  error        text check (error is null or length(error) <= 1000)
+);
+
+create index if not exists ejecuciones_cruce_idx on public.ejecuciones_cruce (iniciado_en desc);
+create unique index if not exists ejecuciones_cruce_una_en_curso on public.ejecuciones_cruce (estado) where estado = 'en_curso';
+
+-- Errores de servicios externos (correo, hoja, anti-robots) para verlos en
+-- /admin. El mensaje llega sin correos ni teléfonos (src/lib/registro.ts).
+create table if not exists public.errores_sistema (
+  id         bigint generated always as identity primary key,
+  origen     text not null check (length(origen) <= 60),
+  mensaje    text not null check (length(mensaje) <= 1000),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists errores_sistema_idx on public.errores_sistema (created_at desc);
+
+-- Devuelve el id de la ejecución, o null si ya hay otra en curso.
+create or replace function public.iniciar_cruce(p_origen text)
+returns bigint
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id bigint;
+begin
+  perform pg_advisory_xact_lock(hashtextextended('iniciar_cruce', 0));
+  update public.ejecuciones_cruce
+     set estado = 'error', terminado_en = now(), error = 'Interrumpida: superó el tiempo máximo'
+   where estado = 'en_curso' and iniciado_en < now() - interval '15 minutes';
+  if exists (select 1 from public.ejecuciones_cruce where estado = 'en_curso') then
+    insert into public.ejecuciones_cruce (origen, estado, terminado_en, error)
+    values (p_origen, 'omitido', now(), 'Ya había un cruce en curso');
+    return null;
+  end if;
+  insert into public.ejecuciones_cruce (origen) values (p_origen) returning id into v_id;
+  -- Limpieza: ejecuciones de más de 180 días y errores de más de 90
+  delete from public.ejecuciones_cruce where iniciado_en < now() - interval '180 days';
+  delete from public.errores_sistema where created_at < now() - interval '90 days';
+  return v_id;
+end;
+$$;
+
+create or replace function public.terminar_cruce(p_id bigint, p_ok boolean, p_resumen jsonb, p_error text)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.ejecuciones_cruce
+     set estado = case when p_ok then 'ok' else 'error' end,
+         terminado_en = now(),
+         resumen = p_resumen,
+         error = left(p_error, 1000)
+   where id = p_id and estado = 'en_curso';
 $$;
 
 -- Confirmación del referido desde el link del correo.
@@ -1955,6 +2098,8 @@ alter table public.pagos                enable row level security;
 alter table public.referidos_historial  enable row level security;
 alter table public.registros_intentos   enable row level security;
 alter table public.telefonos_bloqueados enable row level security;
+alter table public.ejecuciones_cruce    enable row level security;
+alter table public.errores_sistema      enable row level security;
 
 -- Limpieza de políticas previas (para poder re-ejecutar el archivo)
 drop policy if exists "super_admin ve super_admins"       on public.super_admins;
@@ -1970,6 +2115,8 @@ drop policy if exists "super_admin ve el historial"       on public.referidos_hi
 drop policy if exists "super_admin ve bloqueados"         on public.telefonos_bloqueados;
 drop policy if exists "super_admin agrega bloqueados"     on public.telefonos_bloqueados;
 drop policy if exists "super_admin quita bloqueados"      on public.telefonos_bloqueados;
+drop policy if exists "super_admin ve ejecuciones"        on public.ejecuciones_cruce;
+drop policy if exists "super_admin ve errores"            on public.errores_sistema;
 
 -- La función del rol anterior ya no se usa
 drop function if exists public.es_admin();
@@ -1997,12 +2144,9 @@ create policy "referente ve su perfil"
   to authenticated
   using (id = auth.uid() or public.es_super_admin());
 
--- referentes: cada uno (no suspendido) puede corregir sus datos de contacto
-create policy "referente edita su perfil"
-  on public.referentes for update
-  to authenticated
-  using (id = auth.uid() and not suspendido)
-  with check (id = auth.uid() and not suspendido);
+-- referentes: nadie edita su fila desde el navegador. (Antes había una
+-- política "referente edita su perfil" que la app no usaba: permitía
+-- agregarse identificadores de otras personas llamando la API directo.)
 
 create policy "super_admin ve historial referentes"
   on public.referentes_historial for select
@@ -2052,6 +2196,17 @@ create policy "super_admin quita bloqueados"
   to authenticated
   using (public.es_super_admin());
 
+-- ejecuciones del cruce y errores del sistema: solo el super_admin los ve
+create policy "super_admin ve ejecuciones"
+  on public.ejecuciones_cruce for select
+  to authenticated
+  using (public.es_super_admin());
+
+create policy "super_admin ve errores"
+  on public.errores_sistema for select
+  to authenticated
+  using (public.es_super_admin());
+
 -- No hay políticas de INSERT / UPDATE / DELETE en referidos, pagos,
 -- reglas ni historiales: nadie puede cambiarlos desde el navegador. Los
 -- cambios se hacen con las funciones de arriba (que verifican el rol) o
@@ -2062,37 +2217,49 @@ create policy "super_admin quita bloqueados"
 -- ---------------------------------------------------------------------
 revoke all on public.super_admins, public.reglas_programa, public.reglas_historial, public.referentes,
               public.referentes_historial, public.planes, public.referidos, public.pagos,
-              public.referidos_historial, public.registros_intentos, public.telefonos_bloqueados from anon;
+              public.referidos_historial, public.registros_intentos, public.telefonos_bloqueados,
+              public.ejecuciones_cruce, public.errores_sistema from anon;
 
 revoke all on public.registros_intentos from authenticated;
+revoke insert, update, delete on public.ejecuciones_cruce, public.errores_sistema from authenticated;
 revoke insert, update, delete on public.super_admins, public.reglas_programa, public.reglas_historial,
               public.referentes, public.referentes_historial, public.planes, public.referidos,
               public.pagos, public.referidos_historial from authenticated;
 
+-- Supabase da por defecto TODOS los permisos en las tablas nuevas,
+-- incluido TRUNCATE (vacía una tabla saltándose RLS). Se quitan a anon y
+-- authenticated en todas las tablas y secuencias de public.
+revoke all on all tables in schema public from anon;
+revoke all on all sequences in schema public from anon, authenticated;
+revoke truncate, references, trigger on all tables in schema public from authenticated;
+revoke update on public.telefonos_bloqueados from authenticated;
+
 grant usage on schema public to authenticated, service_role;
 grant select, insert, delete on public.telefonos_bloqueados to authenticated;
 grant select on public.super_admins, public.reglas_programa, public.reglas_historial, public.referentes,
-                public.referentes_historial, public.planes, public.pagos, public.referidos_historial
+                public.referentes_historial, public.planes, public.pagos, public.referidos_historial,
+                public.ejecuciones_cruce, public.errores_sistema
   to authenticated;
 
--- referidos: con sesión se pueden leer todas las columnas MENOS la IP,
--- el navegador y el token de confirmación (datos que el referente no
--- necesita ver).
+-- referidos: con sesión NO se leen los datos de contacto (correo,
+-- celular, cuenta Dropi y sus versiones normalizadas), la IP, el navegador
+-- ni el token de confirmación. El referente ve el nombre y correo_oculto
+-- ('an•••@gmail.com'). El super_admin ve todo desde el servidor, que
+-- primero verifica su rol (src/lib/datos-admin.ts).
 revoke select on public.referidos from authenticated;
 grant select (
-  id, referente_id, nombre, correo, telefono, telefono_normalizado, cuenta_dropi, tipo, plan_solicitado,
+  id, referente_id, nombre, correo_oculto, tipo, plan_solicitado,
   autoriza_datos, autorizado_en, version_politica,
   afiliado_atom, cruce_por, plan_hoja, plan_afiliado_id, cruce_actualizado_en,
   bono, estado_bono, editado_manual, pago_id, created_at, updated_at,
-  correo_identidad, dropi_normalizada, requiere_confirmacion, confirmado_en, vence_en, vencido_en,
+  requiere_confirmacion, confirmado_en, vence_en, vencido_en,
   en_hoja, cliente_previo, fecha_activacion_hoja, fecha_activacion_detectada, fecha_activacion,
   fecha_activacion_origen, activo_desde, bono_fijado_en, plan_hoja_activacion, fecha_por_pagar, por_pagar_desde,
-  identificadores, es_referente, revision, telefono_pais
+  es_referente, revision, telefono_pais
 ) on public.referidos to authenticated;
 
--- Un referente solo puede cambiar nombre, teléfono y cuenta Dropi
--- (nunca su código, correo, estado ni suspensión).
-grant update (nombre, telefono, telefono_pais, cuenta_dropi) on public.referentes to authenticated;
+-- referentes: ninguna columna se puede cambiar desde el navegador
+revoke update on public.referentes from authenticated;
 
 -- El servidor (clave secreta = rol service_role) guarda el formulario
 -- público y el cruce. Los proyectos nuevos de Supabase ya no dan estos
@@ -2100,7 +2267,8 @@ grant update (nombre, telefono, telefono_pais, cuenta_dropi) on public.referente
 grant select, insert, update, delete
   on public.super_admins, public.reglas_programa, public.reglas_historial, public.referentes,
      public.referentes_historial, public.planes, public.referidos, public.pagos,
-     public.referidos_historial, public.registros_intentos, public.telefonos_bloqueados
+     public.referidos_historial, public.registros_intentos, public.telefonos_bloqueados,
+     public.ejecuciones_cruce, public.errores_sistema
   to service_role;
 
 -- Funciones: por defecto Postgres deja ejecutarlas a todos; se restringe.
@@ -2114,6 +2282,9 @@ revoke all on function public.bloquear_identidad(text[])                        
 revoke all on function public.aplicar_cruce(jsonb)                                   from public, anon, authenticated;
 revoke all on function public.revisar_vencimientos()                                 from public, anon, authenticated;
 revoke all on function public.registrar_intento_referido(text, inet)                 from public, anon, authenticated;
+revoke all on function public.registrar_intento(text, inet, int)                     from public, anon, authenticated;
+revoke all on function public.iniciar_cruce(text)                                    from public, anon, authenticated;
+revoke all on function public.terminar_cruce(bigint, boolean, jsonb, text)           from public, anon, authenticated;
 revoke all on function public.confirmar_referido(text)                               from public, anon, authenticated;
 revoke all on function public.estado_identidad_referente(text, text, text)            from public, anon, authenticated;
 revoke all on function public.editar_referido(uuid, text, boolean, numeric, text, timestamptz, text) from public, anon;
@@ -2134,6 +2305,9 @@ grant execute on function public.identidad_ocupada(text[], uuid, boolean) to ser
 grant execute on function public.aplicar_cruce(jsonb)   to service_role;
 grant execute on function public.revisar_vencimientos() to service_role;
 grant execute on function public.registrar_intento_referido(text, inet) to service_role;
+grant execute on function public.registrar_intento(text, inet, int) to service_role;
+grant execute on function public.iniciar_cruce(text) to service_role;
+grant execute on function public.terminar_cruce(bigint, boolean, jsonb, text) to service_role;
 grant execute on function public.confirmar_referido(text) to service_role;
 grant execute on function public.estado_identidad_referente(text, text, text) to service_role;
 grant execute on function public.editar_referido(uuid, text, boolean, numeric, text, timestamptz, text) to authenticated;
@@ -2169,7 +2343,7 @@ as $$
       ) order by t.orden)
       from unnest(array['super_admins','reglas_programa','reglas_historial','referentes','referentes_historial',
                         'planes','referidos','pagos','referidos_historial','registros_intentos',
-                        'telefonos_bloqueados'])
+                        'telefonos_bloqueados','ejecuciones_cruce','errores_sistema'])
            with ordinality as t(nombre, orden)
       left join pg_class c on c.relname = t.nombre and c.relnamespace = 'public'::regnamespace and c.relkind = 'r'
     ),
@@ -2183,7 +2357,7 @@ as $$
         'referidos.activo_desde','referidos.bono_fijado_en','referidos.fecha_por_pagar',
         'referidos_historial.motivo','referentes.identificadores','referidos.identificadores',
         'referidos.hoja_identificadores','referidos.revision','referidos.es_referente',
-        'referentes.telefono_pais','referidos.telefono_pais'
+        'referentes.telefono_pais','referidos.telefono_pais','referidos.correo_oculto','registros_intentos.tipo'
       ]) as x(col)
       where not exists (
         select 1 from information_schema.columns ic
@@ -2206,7 +2380,8 @@ as $$
         'registrar_intento_referido','confirmar_referido','editar_referido','volver_a_usar_hoja',
         'suspender_referente','reactivar_referente','actualizar_reglas','registrar_pago',
         'normalizar_dropi_telefono','identificadores_persona','validar_identidad_referente','estado_identidad_referente',
-        'celular_pais','telefono_es_falso','problema_telefono','validar_telefono','telefonos_sospechosos'
+        'celular_pais','telefono_es_falso','problema_telefono','validar_telefono','telefonos_sospechosos',
+        'ocultar_correo','registrar_intento','iniciar_cruce','terminar_cruce'
       ]) with ordinality as f(nombre, orden)
     ),
     'disparadores', (

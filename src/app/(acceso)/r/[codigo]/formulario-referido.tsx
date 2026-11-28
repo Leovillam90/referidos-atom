@@ -124,7 +124,7 @@ export function FormularioReferido({
 
       {claveTurnstile && <Turnstile claveSitio={claveTurnstile} reinicio={estado} />}
 
-      {!estado.ok && <MensajeError mensaje={estado.mensaje} enlace={estado.enlace} />}
+      {!estado.ok && <MensajeError mensaje={estado.mensaje} enlace={estado.enlace} codigo={estado.codigo} />}
 
       <Button type="submit" size="lg" disabled={enviando}>
         {enviando ? "Enviando…" : "Enviar mis datos"}

@@ -38,6 +38,7 @@ export function bloqueSqlCelular(): string {
     "returns table (indicativo text, patron_celular text)",
     "language sql",
     "immutable",
+    "set search_path = public, pg_catalog",
     "as $$",
     "  select v.indicativo, v.patron_celular",
     "  from (values",

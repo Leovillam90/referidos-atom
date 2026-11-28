@@ -46,12 +46,12 @@ export default function PaginaReferente({ params }: PageProps<"/admin/referentes
 }
 
 async function Contenido({ id }: { id: string }) {
-  const { supabase } = await exigirSuperAdmin();
+  const { supabase, datos } = await exigirSuperAdmin();
   if (!z.uuid().safeParse(id).success) return <NoEncontrado />;
 
   const [{ data: referente }, referidos, planes, pagos, historial] = await Promise.all([
     supabase.from("referentes").select(COLUMNAS_REFERENTE).eq("id", id).maybeSingle<ReferenteAdmin>(),
-    traerReferidos(supabase, { referenteId: id }),
+    traerReferidos(datos, { referenteId: id }),
     traerPlanes(supabase),
     traerPagos(supabase, id),
     traerHistorialReferente(supabase, id),

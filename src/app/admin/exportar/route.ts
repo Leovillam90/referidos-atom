@@ -11,9 +11,7 @@ import { esEstadoBono, nombrePlan, SIN_BONO, tituloEstado } from "@/lib/estados"
 import { formatoFechaHoraIso } from "@/lib/formato";
 import { paisDeTelefono } from "@/lib/telefono";
 import { traerPlanes } from "@/lib/planes";
-
-/** `{ digitos }`: número largo que Excel debe dejar como texto (el celular). */
-type Celda = string | number | null | { digitos: string };
+import { aCsv, type Celda } from "@/lib/csv";
 
 /** Celular en el formato estándar, como texto para que Excel no lo vuelva 5,73E+11. */
 const celular = (t: string) => ({ digitos: t });
@@ -25,8 +23,8 @@ const celular = (t: string) => ({ digitos: t });
  *   /admin/exportar?vista=pagos                       → pagos registrados
  */
 export async function GET(request: NextRequest) {
-  const { supabase, esSuperAdmin } = await verificarSuperAdmin();
-  if (!esSuperAdmin) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  const { supabase, datos } = await verificarSuperAdmin();
+  if (!datos) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
   const sp = request.nextUrl.searchParams;
   const vista = sp.get("vista") ?? "referidos";
@@ -38,7 +36,7 @@ export async function GET(request: NextRequest) {
   const fechaHoy = formatoFechaHoraIso(new Date().toISOString()).slice(0, 10);
 
   if (vista === "referentes") {
-    const referentes = await traerResumenReferentes(supabase);
+    const referentes = await traerResumenReferentes(datos);
     nombre = `referentes-${fechaHoy}`;
     filas = [
       ["Nombre", "Correo", "País", "Celular", "Cuenta Dropi", "Código", "Link activo", "Suspendido", "Motivo suspensión",
@@ -56,7 +54,7 @@ export async function GET(request: NextRequest) {
     const [pagos, referentes, referidos] = await Promise.all([
       traerPagos(supabase),
       traerReferentes(supabase),
-      traerReferidos(supabase, { filtro: "pagado" }),
+      traerReferidos(datos, { filtro: "pagado" }),
     ]);
     const referente = new Map(referentes.map((f) => [f.id, f]));
     nombre = `pagos-${fechaHoy}`;
@@ -74,7 +72,7 @@ export async function GET(request: NextRequest) {
       }),
     ];
   } else {
-    const [referidos, planes] = await Promise.all([traerReferidos(supabase, { filtro }), traerPlanes(supabase)]);
+    const [referidos, planes] = await Promise.all([traerReferidos(datos, { filtro }), traerPlanes(supabase)]);
     nombre = `referidos-${filtro === "todos" ? "" : `${filtro}-`}${fechaHoy}`;
     filas = [
       [
@@ -115,26 +113,3 @@ export async function GET(request: NextRequest) {
   });
 }
 
-/**
- * Excel en español (Colombia) usa ";" para separar columnas y ","
- * para los decimales. Los textos que empiezan por = + - @ se protegen
- * para que Excel no los ejecute como fórmulas. Los celulares van como
- * ="573104827756" para que Excel no los convierta en número.
- */
-function aCsv(filas: Celda[][]) {
-  return filas
-    .map((fila) =>
-      fila
-        .map((celda) => {
-          if (celda === null || celda === undefined) return "";
-          if (typeof celda === "number") return String(celda).replace(".", ",");
-          // ="573104827756": Excel lo muestra tal cual (solo dígitos, no es una fórmula peligrosa)
-          if (typeof celda === "object") return /^\d+$/.test(celda.digitos) ? `"=""${celda.digitos}"""` : celda.digitos;
-          let t = celda;
-          if (/^[=+\-@\t\r]/.test(t)) t = `'${t}`;
-          return /[";\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
-        })
-        .join(";"),
-    )
-    .join("\r\n");
-}

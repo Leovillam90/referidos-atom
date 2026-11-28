@@ -73,7 +73,7 @@ export function LineaValores({ className }: { className?: string }) {
 /** Pie de página común. */
 export function PieMarca() {
   return (
-    <footer className="px-4 pt-2 pb-6 text-center text-xs text-muted-foreground">
+    <footer className="px-4 pt-2 pb-6 text-center text-xs text-muted-foreground print:hidden">
       ATOM Solutions Data · Programa de referidos
     </footer>
   );

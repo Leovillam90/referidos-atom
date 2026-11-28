@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
+import { rutaInterna } from "@/lib/rutas";
 import { crearClienteServidor } from "@/lib/supabase/server";
+import { logError } from "@/lib/registro";
 
 /**
  * Aquí llega la persona cuando hace clic en el link mágico del correo.
@@ -14,9 +16,7 @@ export async function GET(request: NextRequest) {
   const tipo = (searchParams.get("type") ?? "email") as EmailOtpType;
   const codigo = searchParams.get("code");
 
-  // Solo se permite volver a rutas internas (evita redirecciones a otros sitios)
-  const siguiente = searchParams.get("next") ?? "/panel";
-  const destino = siguiente.startsWith("/") && !siguiente.startsWith("//") ? siguiente : "/panel";
+  const destino = rutaInterna(searchParams.get("next"), origin);
 
   const supabase = await crearClienteServidor();
 
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (error) {
-    console.error("[auth/confirm]", error);
+    logError("[auth/confirm]", error);
     return NextResponse.redirect(new URL("/auth/error", origin));
   }
 
@@ -40,3 +40,4 @@ export async function GET(request: NextRequest) {
   url.searchParams.set("bienvenida", "1");
   return NextResponse.redirect(url);
 }
+
