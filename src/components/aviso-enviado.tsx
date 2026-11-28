@@ -8,8 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { crearClienteNavegador } from "@/lib/supabase/client";
 
-/** Largo del código del correo (Supabase → Authentication → Providers → Email → "Email OTP Length"). */
-const LARGO_CODIGO = 6;
+/**
+ * Largo del código del correo. Supabase permite de 6 a 10 dígitos
+ * (Authentication → Providers → Email → "Email OTP Length"); se aceptan
+ * todos para que el código nunca quede recortado.
+ */
+const LARGO_MIN = 6;
+const LARGO_MAX = 10;
 /** Espera antes de ir al panel cuando la sesión se inició en otra pestaña. */
 const ESPERA_REDIRECCION_MS = 2000;
 
@@ -38,7 +43,7 @@ function mensajeErrorCodigo(error: { code?: string; status?: number; message?: s
  *     (onAuthStateChange se sincroniza entre pestañas y vuelve a revisar
  *     las cookies cuando la pestaña queda visible): se muestra "¡Listo!"
  *     y en 2 segundos se va al panel.
- *  2. Como alternativa, puede escribir el código de 6 dígitos del correo
+ *  2. Como alternativa, puede escribir el código del correo
  *     (útil si el link se abre en el navegador de la app de Gmail, que no
  *     comparte la sesión con el navegador donde se pidió).
  */
@@ -80,11 +85,11 @@ export function AvisoEnviado({ mensaje, correo }: { mensaje: string; correo?: st
     };
   }, [correo, router]);
 
-  // 2. Código de 6 dígitos
+  // 2. Código del correo
   async function verificar(valor: string) {
     if (!correo || faseRef.current !== "esperando") return;
-    if (valor.length !== LARGO_CODIGO) {
-      setError(`El código tiene ${LARGO_CODIGO} dígitos.`);
+    if (valor.length < LARGO_MIN) {
+      setError(`Escribe el código completo (${LARGO_MIN} dígitos o más).`);
       return;
     }
     setError(null);
@@ -104,11 +109,12 @@ export function AvisoEnviado({ mensaje, correo }: { mensaje: string; correo?: st
 
   function alEscribir(texto: string) {
     // Acepta el código pegado con espacios o guiones ("123 456", "123-456")
-    const limpio = texto.replace(/\D/g, "").slice(0, LARGO_CODIGO);
+    const limpio = texto.replace(/\D/g, "").slice(0, LARGO_MAX);
     setCodigo(limpio);
     if (error) setError(null);
-    // Al completar los 6 dígitos (escritos, pegados o autocompletados) se envía solo
-    if (limpio.length === LARGO_CODIGO && codigo.length !== LARGO_CODIGO) void verificar(limpio);
+    // Pegado o autocompletado (llega todo de una vez): se envía solo.
+    // Escrito a mano: con el botón, porque no sabemos cuántos dígitos trae.
+    if (limpio.length >= LARGO_MIN && limpio.length - codigo.length > 1) void verificar(limpio);
   }
 
   if (fase === "listo" || fase === "entrando") {
@@ -146,7 +152,7 @@ export function AvisoEnviado({ mensaje, correo }: { mensaje: string; correo?: st
           <div className="grid gap-1.5">
             <Label htmlFor="codigo-acceso">¿Prefieres usar un código?</Label>
             <p id="codigo-acceso-ayuda" className="text-xs text-muted-foreground">
-              Escribe el código de {LARGO_CODIGO} dígitos que te enviamos.
+              Escribe el código que te enviamos (el del correo más reciente).
             </p>
             <Input
               ref={campoRef}
@@ -158,12 +164,12 @@ export function AvisoEnviado({ mensaje, correo }: { mensaje: string; correo?: st
               autoComplete="one-time-code"
               pattern="[0-9]*"
               // Más largo que el código para poder pegarlo con espacios o guiones
-              maxLength={LARGO_CODIGO + 6}
-              placeholder={"0".repeat(LARGO_CODIGO)}
+              maxLength={LARGO_MAX + 6}
+              placeholder={"0".repeat(LARGO_MIN)}
               disabled={fase === "verificando"}
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? "codigo-acceso-ayuda codigo-acceso-error" : "codigo-acceso-ayuda"}
-              className="h-12 text-center font-mono text-2xl tracking-[0.5em] md:text-2xl"
+              className="h-12 text-center font-mono text-2xl tracking-[0.3em] md:text-2xl"
             />
             {error && (
               <p id="codigo-acceso-error" role="alert" className="text-xs text-destructive">
