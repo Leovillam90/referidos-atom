@@ -2,6 +2,7 @@ import "server-only";
 import nodemailer from "nodemailer";
 import { urlSitio } from "@/lib/config-programa";
 import { formatoPesos } from "@/lib/formato";
+import { logError } from "@/lib/registro";
 
 /**
  * Envío de correos por SMTP. Todo se configura con variables de entorno
@@ -17,6 +18,11 @@ function crearTransporte() {
     host,
     port: puerto,
     secure: puerto === 465, // 465 = SSL directo; 587 = STARTTLS
+    // Tiempos de espera: si el servidor de correo no responde, se corta
+    // y el error queda en /admin (el registro de la persona ya se guardó).
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
     auth: process.env.SMTP_USER
       ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD ?? "" }
       : undefined,
@@ -29,7 +35,7 @@ const REMITENTE = () =>
 export async function enviarCorreo(opciones: { para: string; asunto: string; texto: string; html: string }) {
   const transporte = crearTransporte();
   if (!transporte) {
-    console.warn("[correo] SMTP_HOST no está configurado; no se envió:", opciones.asunto);
+    logError("[correo] SMTP_HOST no está configurado; no se envió un correo");
     return;
   }
   await transporte.sendMail({
@@ -193,4 +199,13 @@ export function correoPagoRegistrado(d: {
       { texto: "Ver el soporte en mi panel", url: panel },
     ),
   };
+}
+
+/** Para /api/salud: ¿el servidor de correo acepta la conexión y el usuario? (no envía nada) */
+export async function verificarConexionCorreo(): Promise<"ok" | "sin_configurar"> {
+  const transporte = crearTransporte();
+  if (!transporte) return "sin_configurar";
+  await transporte.verify();
+  transporte.close();
+  return "ok";
 }

@@ -81,11 +81,18 @@ export async function leerAfiliados(): Promise<IndiceAfiliados> {
     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
   });
 
-  const respuesta = await sheets({ version: "v4", auth: cliente }).spreadsheets.values.get({
-    spreadsheetId: config.idHoja,
-    range: config.rango,
-    valueRenderOption: "UNFORMATTED_VALUE",
-  });
+  // UNA sola lectura de todo el rango por cruce (la API de Google permite
+  // 300 lecturas por minuto: no hay riesgo de pasarse). Si Google no
+  // responde en 30 s se corta; si falla por algo temporal, se reintenta
+  // hasta 2 veces.
+  const respuesta = await sheets({ version: "v4", auth: cliente }).spreadsheets.values.get(
+    {
+      spreadsheetId: config.idHoja,
+      range: config.rango,
+      valueRenderOption: "UNFORMATTED_VALUE",
+    },
+    { timeout: 30_000, retryConfig: { retry: 2, statusCodesToRetry: [[429, 429], [500, 599]] } },
+  );
 
   const [titulos = [], ...filas] = (respuesta.data.values ?? []) as unknown[][];
   const titulosNorm = titulos.map(normalizarTitulo);
@@ -132,4 +139,18 @@ export async function leerAfiliados(): Promise<IndiceAfiliados> {
   });
 
   return { porCorreo, porTelefono, filas: filas.length, conFecha: c.fecha >= 0, telefonosInvalidos };
+}
+
+/** Para /api/salud: ¿se puede abrir la hoja con la cuenta de servicio? (solo lee el título) */
+export async function verificarConexionHoja(): Promise<void> {
+  const config = leerConfigHoja();
+  const cliente = new auth.JWT({
+    email: config.cuentaServicio,
+    key: config.llavePrivada,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+  });
+  await sheets({ version: "v4", auth: cliente }).spreadsheets.get(
+    { spreadsheetId: config.idHoja, fields: "properties.title" },
+    { timeout: 15_000 },
+  );
 }

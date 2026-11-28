@@ -211,7 +211,7 @@ function TablaReferidos({ referidos, planes }: { referidos: ReferidoDelPanel[]; 
           <TableRow key={r.id}>
             <TableCell data-label="Referido">
               <div className="grid">
-                <span className="font-medium">{r.nombre ?? r.correo}</span>
+                <span className="font-medium">{r.nombre ?? r.correo_oculto ?? "Referido"}</span>
                 <span className="text-xs text-muted-foreground">{formatoFecha(r.created_at)}</span>
               </div>
             </TableCell>

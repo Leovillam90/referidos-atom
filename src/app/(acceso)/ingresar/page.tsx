@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ConMascota } from "@/components/marco-acceso";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { claveSitioTurnstile } from "@/lib/turnstile";
 import { FormularioIngreso } from "./formulario-ingreso";
 
 export const metadata: Metadata = { title: "Entrar · Referidos ATOM" };
@@ -15,7 +16,7 @@ export default function PaginaIngreso() {
         <CardDescription>Escribe tu correo y te enviaremos un link para entrar.</CardDescription>
       </CardHeader>
       <CardContent>
-        <FormularioIngreso />
+        <FormularioIngreso claveTurnstile={claveSitioTurnstile()} />
       </CardContent>
       <CardFooter className="text-sm text-muted-foreground">
         ¿Aún no tienes cuenta?&nbsp;

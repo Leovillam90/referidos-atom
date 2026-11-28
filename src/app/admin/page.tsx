@@ -29,10 +29,15 @@ import { traerPlanes } from "@/lib/planes";
 import { formatoTelefono } from "@/lib/telefono";
 import { cn } from "@/lib/utils";
 import { BotonCruce } from "./boton-cruce";
+import { SaludSistema } from "./salud-sistema";
 import { TablaReferidos } from "./tabla-referidos";
 import { EncabezadoAdmin } from "./encabezado";
 
 export const metadata: Metadata = { title: "Administración · Referidos ATOM" };
+
+// El botón «Actualizar cruce» (acción de esta página) puede tardar con miles
+// de filas: hasta 60 s (máximo del plan Hobby de Vercel sin Fluid Compute).
+export const maxDuration = 60;
 
 const FILTROS: { id: FiltroReferidos; titulo: string }[] = [
   { id: "todos", titulo: "Todos" },
@@ -82,16 +87,16 @@ async function Contenido({
   filtro: FiltroReferidos;
   soloSuspendidos: boolean;
 }) {
-  const { supabase } = await exigirSuperAdmin();
+  const { supabase, datos } = await exigirSuperAdmin();
   const [todos, planes, sospechosos] = await Promise.all([
-    traerReferidos(supabase),
+    traerReferidos(datos),
     traerPlanes(supabase),
     traerTelefonosSospechosos(supabase),
   ]);
   // Nombres para la lista de celulares sospechosos
   const nombreReferido = new Map(todos.map((r) => [r.id, r.nombre ?? r.correo]));
   const nombreReferente = new Map(todos.map((r) => [r.referente_id, r.referente?.nombre ?? "Referente"]));
-  const todosReferentes = vista === "referentes" ? await traerResumenReferentes(supabase, todos) : [];
+  const todosReferentes = vista === "referentes" ? await traerResumenReferentes(datos, todos) : [];
   const referentes = soloSuspendidos ? todosReferentes.filter((f) => f.suspendido) : todosReferentes;
 
   // Aviso: personas que ya eran clientes y se registraron como referidos (últimos 30 días)
@@ -127,6 +132,8 @@ async function Contenido({
         <Resumen titulo="Pagado" valor={formatoPesos(totales.pagado)} />
         <Resumen titulo="Referidos" valor={String(todos.length)} detalle={`${sinCruce} sin cruce con la hoja`} />
       </div>
+
+      <SaludSistema supabase={supabase} />
 
       {enRevision > 0 && (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-destructive/60 bg-destructive/10 p-4 text-sm">

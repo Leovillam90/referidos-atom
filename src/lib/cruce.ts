@@ -2,6 +2,7 @@ import "server-only";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { leerAfiliados } from "@/lib/hoja-afiliados";
 import { buscarEnHoja, esPosibleAutoReferido, identificadoresHoja } from "@/lib/identidad";
+import { logError, ocultarDatos, textoError } from "@/lib/registro";
 
 type ReferidoParaCruce = {
   id: string;
@@ -178,4 +179,41 @@ export async function cruzarReferidos(opciones: { referidoId?: string } = {}): P
   }
 
   return resumen;
+}
+
+export type ResultadoCruceCompleto =
+  | { estado: "ok"; resumen: ResumenCruce }
+  | { estado: "ocupado" }; // ya había otro cruce completo en curso
+
+/**
+ * Cruce COMPLETO (cron diario o botón "Actualizar cruce" de /admin):
+ *   1. Pide turno en la base (iniciar_cruce): si ya hay otro en curso, no
+ *      hace nada y devuelve "ocupado" (dos cruces nunca se pisan).
+ *   2. Cruza todos los referidos y revisa vencimientos.
+ *   3. Deja registrado el resultado o el error en ejecuciones_cruce
+ *      (se ve en /admin), sin datos personales.
+ */
+export async function cruceCompleto(origen: "cron" | "admin"): Promise<ResultadoCruceCompleto> {
+  const supabase = crearClienteAdmin();
+  const { data: id, error } = await supabase.rpc("iniciar_cruce", { p_origen: origen });
+  if (error) {
+    throw new Error(`No se pudo iniciar el cruce: ${error.message}. ¿Ejecutaste de nuevo supabase/schema.sql?`);
+  }
+  if (id === null) return { estado: "ocupado" };
+
+  try {
+    const resumen = await cruzarReferidos();
+    await supabase.rpc("terminar_cruce", { p_id: id, p_ok: true, p_resumen: resumen, p_error: null });
+    return { estado: "ok", resumen };
+  } catch (e) {
+    const mensaje = ocultarDatos(textoError(e));
+    const { error: errorFin } = await supabase.rpc("terminar_cruce", {
+      p_id: id,
+      p_ok: false,
+      p_resumen: null,
+      p_error: mensaje,
+    });
+    if (errorFin) logError("[cruce] no se pudo registrar el error:", errorFin.message);
+    throw e;
+  }
 }

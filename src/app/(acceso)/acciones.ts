@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { revisarCelular } from "@/lib/celular-servidor";
 import { linkWhatsAppAyuda, urlSitio } from "@/lib/config-programa";
 import { esDominioExcluido } from "@/lib/identidad";
+import { permitirIntento } from "@/lib/limites";
+import { ipDelVisitante, logError } from "@/lib/registro";
 import { leerReglas } from "@/lib/reglas";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { crearClienteServidor } from "@/lib/supabase/server";
@@ -39,6 +41,8 @@ function mensajeDeError(error: { message?: string; status?: number; code?: strin
   if (texto.includes("database error")) return MENSAJE_YA_REFERENTE;
   return "No pudimos enviar el correo. Intenta de nuevo en unos minutos.";
 }
+
+const MENSAJE_LIMITE = "Hiciste muchos intentos en poco tiempo. Espera una hora y vuelve a intentarlo.";
 
 const MENSAJE_YA_REFERENTE =
   "Ya hay una cuenta de referente con estos datos (correo, celular o cuenta Dropi). " +
@@ -94,14 +98,17 @@ export async function registrarReferente(
   const version = process.env.POLITICA_DATOS_VERSION?.trim();
   const versionTerminos = process.env.TERMINOS_VERSION?.trim();
   if (!version || !versionTerminos) {
-    console.error("[registro] Falta la variable POLITICA_DATOS_VERSION o TERMINOS_VERSION");
+    logError("[registro] Falta la variable POLITICA_DATOS_VERSION o TERMINOS_VERSION");
     return { ok: false, mensaje: "No pudimos completar tu registro. Intenta de nuevo más tarde.", valores };
   }
 
   const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+  const ip = ipDelVisitante(h);
   if (!(await verificarTurnstile(leer(formData, "cf-turnstile-response"), ip))) {
     return { ok: false, mensaje: "Confirma la verificación anti-robots y vuelve a enviar el formulario.", valores };
+  }
+  if (!(await permitirIntento("registro_referente", ip))) {
+    return { ok: false, mensaje: MENSAJE_LIMITE, valores };
   }
 
   // Correos de dominios excluidos (empleados). La base de datos lo
@@ -116,7 +123,7 @@ export async function registrarReferente(
       };
     }
   } catch (e) {
-    console.error("[registro] reglas:", e instanceof Error ? e.message : e);
+    logError("[registro] reglas:", e);
     return { ok: false, mensaje: "No pudimos completar tu registro. Intenta de nuevo más tarde.", valores };
   }
 
@@ -129,7 +136,7 @@ export async function registrarReferente(
     p_dropi: datos.cuenta_dropi,
   });
   if (errorIdentidad) {
-    console.error("[registro] identidad:", errorIdentidad.message);
+    logError("[registro] identidad:", errorIdentidad.message);
     return { ok: false, mensaje: "No pudimos completar tu registro. Intenta de nuevo más tarde.", valores };
   }
   if (identidad === "ocupada") return conWhatsApp(MENSAJE_YA_REFERENTE, valores);
@@ -159,7 +166,7 @@ export async function registrarReferente(
   });
 
   if (error) {
-    console.error("[registro] signInWithOtp:", error.status, error.message);
+    logError("[registro] signInWithOtp:", error.status, error.message);
     const mensaje = mensajeDeError(error);
     return mensaje === MENSAJE_YA_REFERENTE ? conWhatsApp(mensaje, valores) : { ok: false, mensaje, valores };
   }
@@ -182,6 +189,14 @@ export async function enviarLinkIngreso(
     return { ok: false, errores: erroresPorCampo(resultado.error), valores };
   }
 
+  const ip = ipDelVisitante(await headers());
+  if (!(await verificarTurnstile(leer(formData, "cf-turnstile-response"), ip))) {
+    return { ok: false, mensaje: "Confirma la verificación anti-robots y vuelve a intentarlo.", valores };
+  }
+  if (!(await permitirIntento("ingreso", ip))) {
+    return { ok: false, mensaje: MENSAJE_LIMITE, valores };
+  }
+
   const supabase = await crearClienteServidor();
   const { error } = await supabase.auth.signInWithOtp({
     email: resultado.data.correo,
@@ -194,7 +209,7 @@ export async function enviarLinkIngreso(
     error && (error.code === "otp_disabled" || /signups not allowed/i.test(error.message));
 
   if (error && !correoNoRegistrado) {
-    console.error("[ingreso] signInWithOtp:", error.status, error.message);
+    logError("[ingreso] signInWithOtp:", error.status, error.message);
     return { ok: false, mensaje: mensajeDeError(error), valores };
   }
 

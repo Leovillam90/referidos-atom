@@ -2,6 +2,7 @@ import "server-only";
 import { cacheLife } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
+import { logError } from "@/lib/registro";
 
 /**
  * Reglas del programa (tabla reglas_programa, una sola fila).
@@ -44,7 +45,7 @@ export async function plazosPublicos(): Promise<Pick<Reglas, "dias_vigencia_regi
     const r = await leerReglas();
     return { dias_vigencia_registro: r.dias_vigencia_registro, dias_permanencia_para_pagar: r.dias_permanencia_para_pagar };
   } catch (e) {
-    console.error("[terminos] no se pudieron leer las reglas:", e);
+    logError("[terminos] no se pudieron leer las reglas:", e);
     return null;
   }
 }

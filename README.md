@@ -330,7 +330,7 @@ Se envían desde `notificaciones@atomapp.com.co` usando las variables `SMTP_*`:
 Hay dos formas, y las dos revisan lo mismo:
 
 - En la terminal: `npm run verificar` (con `npm run verificar -- --produccion` revisa además que `NEXT_PUBLIC_SITE_URL` sea `https://referidos.atomsolutionsdata.com`, como se exige en producción)
-- Pruebas de la regla de identidad y del celular: `npm test` (app) y `supabase/pruebas-identidad.sql` en el SQL Editor (base de datos; deshace todo al terminar)
+- Pruebas automáticas: `npm test` y `npm run test:e2e` (ver **Pruebas automáticas** abajo). También `supabase/pruebas-identidad.sql` en el SQL Editor (base de datos; deshace todo al terminar)
 - Reporte de los celulares ya guardados (inválidos, fijos, falsos, bloqueados y sospechosos): `npm run reporte-telefonos` (solo lee)
 - Reporte de registros existentes que la regla de identidad habría bloqueado: `npm run reporte-identidades` (incluye la hoja; solo lee) o `supabase/reporte-identidades.sql`
 - En la app: **/admin/estado** (solo super_admin; botón **Estado** en la barra de administración)
@@ -351,6 +351,26 @@ Muestran una lista con ✅ (bien), ⚠️ (aviso) o ❌ (por corregir) y **qué 
 - Cruce diario
 
 **Nunca muestra el valor de una clave.** Revisa la Site URL de Supabase Auth de forma automática solo si agregas el token opcional `SUPABASE_ACCESS_TOKEN` (ver `.env.example`); si no, te dice qué revisar a mano. En la terminal, el comando termina con código de error si hay algo ❌, así que también sirve antes de publicar.
+
+### Monitoreo: `/api/salud` y estado del sistema en `/admin`
+
+- **`/api/salud`** revisa la conexión a Supabase, a la Google Sheet y al SMTP (sin enviar correos) y responde `200` si todo está bien o `503` si algo falla. Pide `Authorization: Bearer <SALUD_SECRET>` (o `CRON_SECRET` si no configuras `SALUD_SECRET`), o la sesión de un super_admin. Úsala con un monitor gratis (UptimeRobot o Better Stack) para que te avise por correo.
+- **En `/admin`**, arriba, se ve el último cruce completo (automático o con el botón), si falló, si lleva más de 36 horas sin correr y las fallas de correo, hoja o anti-robots de los últimos 7 días. Los registros de las personas se guardan aunque el correo o la hoja fallen.
+- Cada cruce completo queda en la tabla `ejecuciones_cruce` (inicio, fin, resultado o error). Nunca corren dos a la vez: si el cron y el botón coinciden, el segundo se omite.
+
+### Pruebas automáticas
+
+**Ninguna prueba usa la base, la hoja ni el correo de producción.**
+
+| Comando | Qué prueba | Qué necesita |
+|---|---|---|
+| `npm test` | Normalización de celular (todos los países y números falsos), correo (Gmail con puntos y "+") y cuenta Dropi; identidad cruzada; utilidades de seguridad. **Y `supabase/schema.sql` completo** en una base PostgreSQL en memoria (PGlite): estados del bono, vigencia, permanencia, ya cliente, vencido, bono único, auto-referidos, duplicados, celulares falsos, suspensión, pagos, Row Level Security y permisos. | Nada (ni internet ni Docker). Tarda ~1 minuto. |
+| `npm run test:e2e` | Navegador real (Chrome) en PC y celular: páginas públicas, accesos negados, cabeceras de seguridad, validaciones del registro, tamaños de pantalla (360 a 1920 px), teclado y "reducir movimiento". | Google Chrome instalado. Compila la app aparte (`.next-e2e`) con variables de prueba: **ignora `.env.local`**. |
+| `npm run test:e2e` con `.env.e2e` | Además, los flujos completos: registro de referente y referido, auto-referidos, duplicados, cruce simulado, panel, acceso negado a `/admin`, suspensión. | Una base de **pruebas**: copia `.env.e2e.example` como `.env.e2e` y sigue sus pasos (Supabase local con Docker, o un segundo proyecto de Supabase). |
+
+- Ver el informe del navegador después de `test:e2e`: `npm run test:e2e:informe`.
+- La primera vez, `npm run test:e2e` tarda unos minutos porque compila la app.
+- Si una prueba de `bd-reglas` falla después de un cambio, ese cambio alteró la lógica del bono: revísalo antes de publicar.
 
 ---
 
@@ -394,7 +414,12 @@ Muestran una lista con ✅ (bien), ⚠️ (aviso) o ❌ (por corregir) y **qué 
 - Los soportes de pago están en un bucket **privado**. Se abren con links temporales firmados (60 segundos) y un referente solo puede abrir los de sus propios pagos.
 - Los referidos (visitantes sin sesión) nunca ven el valor de los bonos.
 - Los visitantes sin login **no** pueden leer ni escribir en la base de datos directamente. El formulario de referidos lo guarda el servidor después de validar los datos.
-- Un referente solo puede modificar su nombre, celular (con las mismas reglas) y cuenta Dropi (nunca su código ni su correo).
+- Un referente **no puede leer el correo, el celular ni la cuenta Dropi de sus referidos** (permisos por columna en la base de datos): en su panel ve el nombre y una pista del correo (`an•••@gmail.com`). El super_admin los ve desde el servidor, que primero verifica su rol.
+- Un referente no puede modificar su fila desde el navegador (ni código, ni correo, ni datos de contacto, ni suspensión).
+- Cabeceras de seguridad en todas las páginas (Content-Security-Policy, HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy) y cookie de sesión con `Secure` y `SameSite=Lax` en producción.
+- Límite de intentos por IP para pedir el link de acceso y para registrarse como referente (además del de Supabase Auth y Turnstile).
+- Los soportes de pago se revisan por su contenido (firma del archivo), no por la extensión.
+- Los mensajes de error que se guardan en los logs y en `/admin` ocultan correos, celulares y claves.
 - La Google Sheet se lee solo desde el servidor, con permiso de **solo lectura**.
 - Por cada referido se guarda la prueba de la autorización de datos (fecha, versión de la política, IP y navegador), como exige la Ley 1581 de 2012. Por cada referente, la versión y fecha de la política y de los términos que aceptó.
 - Los referentes no pueden ver la IP, el navegador ni el token de confirmación de sus referidos (permisos por columna).

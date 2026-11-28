@@ -3,12 +3,14 @@
 import { randomUUID } from "node:crypto";
 import { refresh } from "next/cache";
 import { after } from "next/server";
-import { cruzarReferidos } from "@/lib/cruce";
+import { cruceCompleto, cruzarReferidos } from "@/lib/cruce";
 import { correoPagoRegistrado, enviarCorreo } from "@/lib/correo";
 import { verificarSuperAdmin } from "@/lib/datos-admin";
+import { tipoRealSoporte } from "@/lib/archivos";
 import { formatoFecha } from "@/lib/formato";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { ejemploCelular, esPaisPermitido, formatoEstandarPosible, formatoTelefono } from "@/lib/telefono";
+import { logError, ocultarDatos, registrarError, textoError } from "@/lib/registro";
 import {
   erroresPorCampo,
   esquemaEdicionReferido,
@@ -44,7 +46,11 @@ export async function actualizarCruce(): Promise<EstadoCruce> {
   if (!esSuperAdmin) return { ok: false, mensaje: SIN_PERMISO };
 
   try {
-    const r = await cruzarReferidos();
+    const completo = await cruceCompleto("admin");
+    if (completo.estado === "ocupado") {
+      return { ok: false, mensaje: "Ya hay un cruce en curso (el automático o el de otro super_admin). Espera un minuto y vuelve a revisar." };
+    }
+    const r = completo.resumen;
     refresh();
     return {
       ok: true,
@@ -65,9 +71,8 @@ export async function actualizarCruce(): Promise<EstadoCruce> {
           : ""),
     };
   } catch (e) {
-    const detalle = e instanceof Error ? e.message : "Error desconocido";
-    console.error("[admin] cruce:", detalle);
-    return { ok: false, mensaje: `No se pudo hacer el cruce. ${detalle}` };
+    await registrarError("cruce (admin)", e, { guardar: true });
+    return { ok: false, mensaje: `No se pudo hacer el cruce. ${ocultarDatos(textoError(e))}` };
   }
 }
 
@@ -109,7 +114,7 @@ export async function editarReferido(_anterior: EstadoEdicion, formData: FormDat
     p_motivo: d.motivo,
   });
   if (error) {
-    console.error("[admin] editar referido:", error.code, error.message);
+    logError("[admin] editar referido:", error.code, error.message);
     return { ok: false, mensaje: mensajeBD(error) };
   }
 
@@ -126,7 +131,7 @@ export async function volverAUsarHoja(_anterior: EstadoEdicion, formData: FormDa
   const { id, motivo } = resultado.data;
   const { error } = await supabase.rpc("volver_a_usar_hoja", { p_id: id, p_motivo: motivo });
   if (error) {
-    console.error("[admin] volver a usar la hoja:", error.code, error.message);
+    logError("[admin] volver a usar la hoja:", error.code, error.message);
     return { ok: false, mensaje: mensajeBD(error) };
   }
 
@@ -134,7 +139,7 @@ export async function volverAUsarHoja(_anterior: EstadoEdicion, formData: FormDa
   try {
     await cruzarReferidos({ referidoId: id });
   } catch (e) {
-    console.error("[admin] cruce tras volver a la hoja:", e instanceof Error ? e.message : e);
+    logError("[admin] cruce tras volver a la hoja:", e);
     refresh();
     return {
       ok: true,
@@ -163,7 +168,7 @@ export async function cambiarSuspension(_anterior: EstadoEdicion, formData: Form
     p_motivo: motivo,
   });
   if (error) {
-    console.error("[admin] suspensión:", error.code, error.message);
+    logError("[admin] suspensión:", error.code, error.message);
     return { ok: false, mensaje: mensajeBD(error) };
   }
 
@@ -201,7 +206,7 @@ export async function guardarReglas(_anterior: EstadoEdicion, formData: FormData
     p_max_por_hora: d.max_registros_por_link_por_hora,
   });
   if (error) {
-    console.error("[admin] reglas:", error.code, error.message);
+    logError("[admin] reglas:", error.code, error.message);
     return { ok: false, mensaje: mensajeBD(error) };
   }
 
@@ -226,7 +231,7 @@ export async function agregarTelefonoBloqueado(_anterior: EstadoEdicion, formDat
   const { error } = await supabase.from("telefonos_bloqueados").insert({ telefono, nota, creado_por: usuario.id });
   if (error) {
     if (error.code === "23505") return { ok: false, errores: { telefono: "Ese número ya está bloqueado" } };
-    console.error("[admin] bloquear teléfono:", error.code, error.message);
+    logError("[admin] bloquear teléfono:", error.code, error.message);
     return { ok: false, mensaje: mensajeBD(error) };
   }
   refresh();
@@ -238,7 +243,7 @@ export async function quitarTelefonoBloqueado(formData: FormData): Promise<void>
   if (!esSuperAdmin) return;
   const telefono = leer(formData, "telefono");
   const { error } = await supabase.from("telefonos_bloqueados").delete().eq("telefono", telefono);
-  if (error) console.error("[admin] quitar teléfono bloqueado:", error.code, error.message);
+  if (error) logError("[admin] quitar teléfono bloqueado:", error.code, error.message);
   refresh();
 }
 
@@ -276,7 +281,7 @@ export async function prepararSoporte(datos: {
   const path = `${datos.referenteId}/${randomUUID()}.${extension}`;
   const { data, error } = await crearClienteAdmin().storage.from(BUCKET).createSignedUploadUrl(path);
   if (error || !data) {
-    console.error("[admin] permiso de subida:", error?.message);
+    logError("[admin] permiso de subida:", error?.message);
     return { ok: false, mensaje: "No se pudo preparar la subida del soporte. ¿Ejecutaste de nuevo schema.sql?" };
   }
   return { ok: true, path: data.path, token: data.token };
@@ -309,8 +314,21 @@ export async function registrarPago(
   if (!d.soportePath.startsWith(`${d.referenteId}/`)) {
     return { ok: false, mensaje: "El soporte no corresponde a este referente." };
   }
-  const { error: errorArchivo } = await almacen.info(d.soportePath);
-  if (errorArchivo) return { ok: false, mensaje: "No encontramos el soporte. Vuelve a adjuntarlo." };
+  // El archivo debe existir, pesar máximo 5 MB y SER de verdad una imagen o
+  // un PDF (se revisa su contenido, no la extensión ni lo que dijo el navegador)
+  const { data: archivo, error: errorArchivo } = await almacen.download(d.soportePath);
+  if (errorArchivo || !archivo) return { ok: false, mensaje: "No encontramos el soporte. Vuelve a adjuntarlo." };
+  const inicio = new Uint8Array(await archivo.slice(0, 16).arrayBuffer());
+  const tipoReal = tipoRealSoporte(inicio);
+  const extension = d.soportePath.split(".").pop();
+  if (
+    archivo.size > MAX_SOPORTE_BYTES ||
+    !tipoReal ||
+    TIPOS_SOPORTE[tipoReal] !== extension
+  ) {
+    await almacen.remove([d.soportePath]);
+    return { ok: false, mensaje: "El soporte no es una imagen (JPG, PNG o WEBP) o un PDF válido. Vuelve a adjuntarlo." };
+  }
 
   const { error } = await supabase.rpc("registrar_pago", {
     p_referente_id: d.referenteId,
@@ -321,7 +339,7 @@ export async function registrarPago(
     p_soporte_path: d.soportePath,
   });
   if (error) {
-    console.error("[admin] registrar pago:", error.code, error.message);
+    logError("[admin] registrar pago:", error.code, error.message);
     await almacen.remove([d.soportePath]); // no dejar archivos sueltos
     return { ok: false, mensaje: mensajeBD(error) };
   }
@@ -343,7 +361,7 @@ export async function registrarPago(
         });
         await enviarCorreo({ para: referente.correo, ...correo });
       } catch (e) {
-        console.error("[admin] correo de pago:", e instanceof Error ? e.message : e);
+        await registrarError("correo de pago", e, { guardar: true });
       }
     });
   }

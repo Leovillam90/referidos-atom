@@ -41,7 +41,7 @@ export default async function PaginaTerminos() {
           <p>
             El programa lo organiza <PorRevisar>razón social, NIT y domicilio de ATOM</PorRevisar>. Al registrarte
             como referente aceptas estos términos y la{" "}
-            <Link href="/politica-datos" className="text-primary underline-offset-4 hover:underline">
+            <Link href="/politica-datos" className="text-primary underline underline-offset-4">
               política de tratamiento de datos
             </Link>
             .

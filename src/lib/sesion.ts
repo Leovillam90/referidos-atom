@@ -19,7 +19,8 @@ export type Referente = {
 export type ReferidoDelPanel = {
   id: string;
   nombre: string | null;
-  correo: string;
+  /** Pista del correo ('an•••@gmail.com'): el referente no ve los datos de contacto */
+  correo_oculto: string | null;
   plan_solicitado: string | null;
   plan_afiliado_id: string | null;
   plan_hoja: string | null;
@@ -73,7 +74,7 @@ export async function obtenerPanelReferente() {
     supabase
       .from("referidos")
       .select(
-        "id, nombre, correo, plan_solicitado, plan_afiliado_id, plan_hoja, afiliado_atom, bono, estado_bono, " +
+        "id, nombre, correo_oculto, plan_solicitado, plan_afiliado_id, plan_hoja, afiliado_atom, bono, estado_bono, " +
           "vence_en, fecha_por_pagar, bono_fijado_en, created_at, " +
           "pago:pagos(id, fecha_pago)",
       )

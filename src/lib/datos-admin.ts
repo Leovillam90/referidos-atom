@@ -1,8 +1,10 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { crearClienteServidor } from "@/lib/supabase/server";
 import type { EstadoBono } from "@/lib/estados";
+import { logError } from "@/lib/registro";
 
 export type ReferidoAdmin = {
   id: string;
@@ -99,24 +101,39 @@ export type HistorialReferente = {
 };
 
 /**
- * ¿Hay sesión y es super_admin? Devuelve el cliente CON la sesión del
- * usuario: las consultas siguen pasando por Row Level Security, que solo
- * deja ver todo a quien está en la tabla super_admins.
+ * Cliente para LEER los datos de contacto de los referidos (correo,
+ * celular, cuenta Dropi). La base de datos no se los entrega a ningún
+ * usuario con sesión (así un referente nunca puede leerlos), por eso el
+ * panel del super_admin los lee con la clave secreta. Este tipo solo lo
+ * produce verificarSuperAdmin() DESPUÉS de comprobar el rol: TypeScript
+ * no deja pasar aquí el cliente de un usuario cualquiera.
+ */
+export type ClienteSuperAdmin = SupabaseClient & { readonly __verificadoSuperAdmin: true };
+
+/**
+ * ¿Hay sesión y es super_admin? Devuelve:
+ *   supabase = cliente CON la sesión del usuario (RLS). Las acciones
+ *              (editar, pagar, suspender) van por aquí: la base vuelve a
+ *              verificar el rol dentro de cada función.
+ *   datos    = cliente de lectura con la clave secreta, SOLO si es
+ *              super_admin (null en cualquier otro caso).
  */
 export async function verificarSuperAdmin() {
   const supabase = await crearClienteServidor();
   const { data } = await supabase.auth.getUser();
-  if (!data.user) return { supabase, usuario: null, esSuperAdmin: false };
+  if (!data.user) return { supabase, usuario: null, esSuperAdmin: false, datos: null };
   const { data: es } = await supabase.rpc("es_super_admin");
-  return { supabase, usuario: data.user, esSuperAdmin: es === true };
+  const esSuperAdmin = es === true;
+  const datos = esSuperAdmin ? (crearClienteAdmin() as ClienteSuperAdmin) : null;
+  return { supabase, usuario: data.user, esSuperAdmin, datos };
 }
 
 /** Para páginas: manda a /ingresar o /panel si no es super_admin. */
 export async function exigirSuperAdmin() {
   const r = await verificarSuperAdmin();
   if (!r.usuario) redirect("/ingresar");
-  if (!r.esSuperAdmin) redirect("/panel");
-  return r;
+  if (!r.esSuperAdmin || !r.datos) redirect("/panel");
+  return { ...r, usuario: r.usuario, datos: r.datos };
 }
 
 const PAGINA = 1000;
@@ -146,7 +163,7 @@ const COLUMNAS_REFERIDO =
 export type FiltroReferidos = EstadoBono | "sin_cruce" | "todos";
 
 export function traerReferidos(
-  supabase: SupabaseClient,
+  supabase: ClienteSuperAdmin,
   opciones: { filtro?: FiltroReferidos; referenteId?: string } = {},
 ) {
   return traerTodo<ReferidoAdmin>((desde, hasta) => {
@@ -164,7 +181,7 @@ export function traerReferidos(
   });
 }
 
-export async function traerReferido(supabase: SupabaseClient, id: string) {
+export async function traerReferido(supabase: ClienteSuperAdmin, id: string) {
   const { data, error } = await supabase
     .from("referidos")
     .select(COLUMNAS_REFERIDO)
@@ -207,7 +224,7 @@ export async function traerReferentes(supabase: SupabaseClient) {
 }
 
 export async function traerResumenReferentes(
-  supabase: SupabaseClient,
+  supabase: ClienteSuperAdmin,
   referidos?: ReferidoAdmin[],
 ): Promise<ResumenReferente[]> {
   const [referentes, todos] = await Promise.all([
@@ -280,8 +297,44 @@ export type TelefonoSospechoso = {
 export async function traerTelefonosSospechosos(supabase: SupabaseClient): Promise<TelefonoSospechoso[]> {
   const { data, error } = await supabase.rpc("telefonos_sospechosos");
   if (error) {
-    console.error("[admin] teléfonos sospechosos:", error.message);
+    logError("[admin] teléfonos sospechosos:", error.message);
     return [];
   }
   return (data ?? []) as TelefonoSospechoso[];
+}
+
+export type EjecucionCruce = {
+  estado: "en_curso" | "ok" | "error" | "omitido";
+  origen: "cron" | "admin";
+  iniciado_en: string;
+  error: string | null;
+};
+export type ErrorSistema = { origen: string; mensaje: string; created_at: string };
+
+/** Último cruce completo y fallas de servicios externos de los últimos 7 días (para /admin). */
+export async function traerSaludSistema(supabase: SupabaseClient) {
+  const hace7Dias = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const [{ data: ultimo }, { data: errores, count }] = await Promise.all([
+    supabase
+      .from("ejecuciones_cruce")
+      .select("estado, origen, iniciado_en, error")
+      .neq("estado", "omitido")
+      .order("iniciado_en", { ascending: false })
+      .limit(1)
+      .maybeSingle<EjecucionCruce>(),
+    supabase
+      .from("errores_sistema")
+      .select("origen, mensaje, created_at", { count: "exact" })
+      .gte("created_at", hace7Dias)
+      .order("created_at", { ascending: false })
+      .limit(5)
+      .returns<ErrorSistema[]>(),
+  ]);
+  return {
+    ultimo: ultimo ?? null,
+    errores: errores ?? [],
+    totalErrores: count ?? 0,
+    // Sin cruce en más de 36 horas: el cron diario probablemente no corrió
+    atrasado: !ultimo || Date.now() - new Date(ultimo.iniciado_en).getTime() > 36 * 3_600_000,
+  };
 }

@@ -12,3 +12,7 @@ node_modules
 *service-account*.json
 credenciales*.json
 *.pem
+.env.e2e
+.next-e2e
+test-results
+playwright-report

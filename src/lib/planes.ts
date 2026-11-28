@@ -4,6 +4,7 @@ import { cacheLife } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import type { Plan, PlanBasico } from "@/lib/estados";
+import { logError } from "@/lib/registro";
 
 /** Todos los planes (con bono). El cliente decide los permisos: RLS o clave secreta. */
 export async function traerPlanes(supabase: SupabaseClient): Promise<Plan[]> {
@@ -47,7 +48,7 @@ export async function bonosPublicos(): Promise<BonoPublico[]> {
     const planes = await traerPlanes(crearClienteAdmin());
     return planes.filter((p) => p.activo).map(({ id, nombre, bono }) => ({ id, nombre, bono }));
   } catch (e) {
-    console.error("[inicio] no se pudieron leer los bonos:", e);
+    logError("[inicio] no se pudieron leer los bonos:", e);
     return [];
   }
 }

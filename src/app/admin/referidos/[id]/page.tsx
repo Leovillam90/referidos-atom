@@ -33,11 +33,11 @@ export default function PaginaReferido({ params }: PageProps<"/admin/referidos/[
 }
 
 async function Contenido({ id }: { id: string }) {
-  const { supabase } = await exigirSuperAdmin();
+  const { supabase, datos } = await exigirSuperAdmin();
   if (!z.uuid().safeParse(id).success) return <NoEncontrado />;
 
   const [r, planes, historial, sospechosos] = await Promise.all([
-    traerReferido(supabase, id),
+    traerReferido(datos, id),
     traerPlanes(supabase),
     traerHistorial(supabase, id),
     traerTelefonosSospechosos(supabase),

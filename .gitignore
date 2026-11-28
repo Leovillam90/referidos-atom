@@ -36,8 +36,11 @@ yarn-error.log*
 .env*.local
 .env.development
 .env.production
-# ...excepto la plantilla sin secretos
+# Base de PRUEBAS para npm run test:e2e (también tiene claves)
+.env.e2e
+# ...excepto las plantillas sin secretos
 !.env.example
+!.env.e2e.example
 
 # Credenciales de Google (por si alguien guarda el archivo JSON aquí)
 *service-account*.json
@@ -49,3 +52,11 @@ credenciales*.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# pruebas de punta a punta (Playwright)
+/.next-e2e/
+/test-results/
+/playwright-report/
+/tests/e2e/.auth/
+*.key
+*private-key*.json

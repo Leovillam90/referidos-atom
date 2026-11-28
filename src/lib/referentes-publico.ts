@@ -2,6 +2,7 @@ import "server-only";
 import { connection } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { campoCodigo } from "@/lib/validaciones";
+import { logError } from "@/lib/registro";
 
 export type ReferentePublico = {
   id: string;
@@ -35,7 +36,7 @@ export async function buscarReferentePorCodigo(codigo: string): Promise<Referent
     .maybeSingle<ReferentePublico>();
 
   if (error) {
-    console.error("[referido] buscar referente:", error.message);
+    logError("[referido] buscar referente:", error.message);
     throw new Error("No se pudo verificar el link");
   }
   return data;

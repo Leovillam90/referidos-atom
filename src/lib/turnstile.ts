@@ -1,4 +1,5 @@
 import "server-only";
+import { logError, registrarError } from "@/lib/registro";
 
 /**
  * Verificación anti-robots con Cloudflare Turnstile (gratis).
@@ -29,12 +30,12 @@ export async function verificarTurnstile(token: string, ip: string | null): Prom
       signal: AbortSignal.timeout(8000),
     });
     const datos = (await r.json()) as { success?: boolean; "error-codes"?: string[] };
-    if (!datos.success) console.warn("[turnstile] rechazado:", datos["error-codes"]);
+    if (!datos.success) logError("[turnstile] rechazado:", datos["error-codes"]);
     return datos.success === true;
   } catch (e) {
     // Si Cloudflare no responde, no se bloquea a las personas: los
     // límites por hora de la base de datos siguen protegiendo el formulario.
-    console.error("[turnstile] sin respuesta:", e instanceof Error ? e.message : e);
+    void registrarError("turnstile sin respuesta", e, { guardar: true });
     return true;
   }
 }

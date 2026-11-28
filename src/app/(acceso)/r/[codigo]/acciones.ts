@@ -4,7 +4,6 @@ import { randomBytes } from "node:crypto";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { z } from "zod";
 import { revisarCelular } from "@/lib/celular-servidor";
 import { linkWhatsAppAyuda, urlSitio } from "@/lib/config-programa";
 import { cruzarReferidos } from "@/lib/cruce";
@@ -20,19 +19,11 @@ import { huellaToken } from "@/lib/token";
 import { verificarTurnstile } from "@/lib/turnstile";
 import { erroresPorCampo, esquemaReferido } from "@/lib/validaciones";
 import type { EstadoFormulario } from "../../acciones";
+import { ipDelVisitante, logError, registrarError } from "@/lib/registro";
 
 function leer(formData: FormData, campo: string) {
   const v = formData.get(campo);
   return typeof v === "string" ? v : "";
-}
-
-const esIp = z.union([z.ipv4(), z.ipv6()]);
-
-/** IP del visitante (Vercel la envía en x-forwarded-for). */
-function ipDelVisitante(h: Headers): string | null {
-  const candidata =
-    h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip")?.trim() || "";
-  return esIp.safeParse(candidata).success ? candidata : null;
 }
 
 /** Mensaje con link de WhatsApp (sin revelar datos de nadie). */
@@ -108,7 +99,7 @@ export async function registrarReferido(
     p_ip: ip,
   });
   if (errorIntento) {
-    console.error("[referido] registrar intento:", errorIntento.message);
+    logError("[referido] registrar intento:", errorIntento.message);
     return { ok: false, mensaje: MENSAJES.error, valores };
   }
   if (permitido === false) return { ok: false, mensaje: MENSAJES.limite, valores };
@@ -133,7 +124,7 @@ export async function registrarReferido(
 
   const version = process.env.POLITICA_DATOS_VERSION?.trim();
   if (!version) {
-    console.error("[referido] Falta la variable POLITICA_DATOS_VERSION");
+    logError("[referido] Falta la variable POLITICA_DATOS_VERSION");
     return { ok: false, mensaje: MENSAJES.error, valores };
   }
 
@@ -172,7 +163,7 @@ export async function registrarReferido(
     if (clave.includes("TELEFONO_INVALIDO")) {
       return { ok: false, errores: { telefono: mensajeCelular(datos.telefono_pais) }, valores };
     }
-    console.error("[referido] insertar:", error.code, error.message);
+    logError("[referido] insertar:", error.code, error.message);
     return { ok: false, mensaje: MENSAJES.error, valores };
   }
 
@@ -184,7 +175,7 @@ export async function registrarReferido(
     try {
       await cruzarReferidos({ referidoId: nuevo.id });
     } catch (e) {
-      console.error("[referido] cruce inmediato:", e instanceof Error ? e.message : e);
+      await registrarError("cruce inmediato", e, { guardar: true });
     }
     try {
       const reglas = await leerReglas(admin);
@@ -200,7 +191,7 @@ export async function registrarReferido(
         await avisarAlReferente(nuevo.id, reglas.dias_vigencia_registro);
       }
     } catch (e) {
-      console.error("[referido] correo:", e instanceof Error ? e.message : e);
+      await registrarError("correo de nuevo referido", e, { guardar: true });
     }
   });
 

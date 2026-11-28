@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { crearClienteServidor } from "@/lib/supabase/server";
+import { logError } from "@/lib/registro";
 
 /**
  * Abre el soporte de un pago con un link temporal firmado (60 segundos).
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/soporte/[pag
     .createSignedUrl(pago.soporte_path, 60);
 
   if (error || !data?.signedUrl) {
-    console.error("[soporte] link firmado:", error?.message);
+    logError("[soporte] link firmado:", error?.message);
     return new NextResponse("No se pudo abrir el soporte", { status: 404 });
   }
 
